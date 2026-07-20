@@ -27,3 +27,30 @@ def dashboard_page(
             "page_title": "API Sentry Dashboard",
         },
     )
+
+
+@router.get(
+    "/verify-email",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/reset-password",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+@router.get(
+    "/signup",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def authentication_page(
+    request: Request,
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard/projects.html",
+        context={
+            "page_title": "API Sentry Account",
+        },
+    )

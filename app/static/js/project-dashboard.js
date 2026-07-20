@@ -22,6 +22,41 @@ const elements = {
     loginButton: document.getElementById(
         "loginButton"
     ),
+    authTabs: document.getElementById("authTabs"),
+    authPanels: document.querySelectorAll(".auth-panel"),
+    authPanelButtons: document.querySelectorAll(
+        "[data-auth-panel]"
+    ),
+    signupForm: document.getElementById("signupForm"),
+    signupButton: document.getElementById("signupButton"),
+    signupMessage: document.getElementById("signupMessage"),
+    forgotPasswordForm: document.getElementById(
+        "forgotPasswordForm"
+    ),
+    forgotPasswordButton: document.getElementById(
+        "forgotPasswordButton"
+    ),
+    forgotPasswordMessage: document.getElementById(
+        "forgotPasswordMessage"
+    ),
+    resendVerificationForm: document.getElementById(
+        "resendVerificationForm"
+    ),
+    resendVerificationButton: document.getElementById(
+        "resendVerificationButton"
+    ),
+    resendVerificationMessage: document.getElementById(
+        "resendVerificationMessage"
+    ),
+    checkEmailText: document.getElementById("checkEmailText"),
+    resendEmail: document.getElementById("resendEmail"),
+    verifyStatusIcon: document.getElementById("verifyStatusIcon"),
+    verifyTitle: document.getElementById("verifyTitle"),
+    verifyMessage: document.getElementById("verifyMessage"),
+    verifyLoginButton: document.getElementById("verifyLoginButton"),
+    resetPasswordForm: document.getElementById("resetPasswordForm"),
+    resetPasswordButton: document.getElementById("resetPasswordButton"),
+    resetPasswordMessage: document.getElementById("resetPasswordMessage"),
     authMessage: document.getElementById(
         "authMessage"
     ),
@@ -176,6 +211,55 @@ function setFormMessage(
 
     if (type) {
         element.classList.add(type);
+    }
+}
+
+function getErrorMessage(data, fallback) {
+    if (typeof data.detail === "string") {
+        return data.detail;
+    }
+
+    if (Array.isArray(data.detail)) {
+        return data.detail
+            .map((item) => item.msg || "Invalid value")
+            .join(" ");
+    }
+
+    if (data.error && data.error.message) {
+        return data.error.message;
+    }
+
+    return fallback;
+}
+
+function showAuthPanel(panelName) {
+    elements.authPanels.forEach((panel) => {
+        panel.classList.toggle(
+            "hidden",
+            panel.id !== `${panelName}Panel`,
+        );
+    });
+
+    const showTabs = ["login", "signup"].includes(panelName);
+    elements.authTabs.classList.toggle("hidden", !showTabs);
+
+    elements.authTabs
+        .querySelectorAll(".auth-tab")
+        .forEach((tab) => {
+            tab.classList.toggle(
+                "active",
+                tab.dataset.authPanel === panelName,
+            );
+            tab.setAttribute(
+                "aria-selected",
+                String(tab.dataset.authPanel === panelName),
+            );
+        });
+
+    const panel = document.getElementById(`${panelName}Panel`);
+    const focusTarget = panel && panel.querySelector("input");
+    if (focusTarget) {
+        window.setTimeout(() => focusTarget.focus(), 50);
     }
 }
 
@@ -803,6 +887,245 @@ async function handleLogin(event) {
     }
 }
 
+async function handleSignup(event) {
+    event.preventDefault();
+    const formData = new FormData(elements.signupForm);
+    const email = String(formData.get("email") || "").trim();
+    const password = String(formData.get("password") || "");
+    const confirmation = String(
+        formData.get("password_confirmation") || ""
+    );
+
+    setFormMessage(elements.signupMessage);
+
+    if (password !== confirmation) {
+        setFormMessage(
+            elements.signupMessage,
+            "Passwords do not match.",
+            "error",
+        );
+        return;
+    }
+
+    if (!formData.get("terms")) {
+        setFormMessage(
+            elements.signupMessage,
+            "You must accept the terms and privacy policy.",
+            "error",
+        );
+        return;
+    }
+
+    elements.signupButton.disabled = true;
+    elements.signupButton.textContent = "Creating Account...";
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/signup`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                full_name: String(formData.get("full_name") || "").trim(),
+                email,
+                password,
+            }),
+        });
+        const data = await parseResponse(response);
+
+        if (!response.ok) {
+            throw new Error(
+                getErrorMessage(data, "Unable to create your account.")
+            );
+        }
+
+        elements.resendEmail.value = email;
+        elements.checkEmailText.textContent =
+            `We sent a verification link to ${email}.`;
+        elements.signupForm.reset();
+        showAuthPanel("checkEmail");
+    } catch (error) {
+        setFormMessage(
+            elements.signupMessage,
+            error.message,
+            "error",
+        );
+    } finally {
+        elements.signupButton.disabled = false;
+        elements.signupButton.textContent = "Create Account";
+    }
+}
+
+async function handleForgotPassword(event) {
+    event.preventDefault();
+    const formData = new FormData(elements.forgotPasswordForm);
+    elements.forgotPasswordButton.disabled = true;
+    setFormMessage(elements.forgotPasswordMessage);
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                email: String(formData.get("email") || "").trim(),
+            }),
+        });
+        const data = await parseResponse(response);
+        if (!response.ok) {
+            throw new Error(
+                getErrorMessage(data, "Unable to request a password reset.")
+            );
+        }
+        setFormMessage(
+            elements.forgotPasswordMessage,
+            data.message,
+            "success",
+        );
+    } catch (error) {
+        setFormMessage(
+            elements.forgotPasswordMessage,
+            error.message,
+            "error",
+        );
+    } finally {
+        elements.forgotPasswordButton.disabled = false;
+    }
+}
+
+async function handleResendVerification(event) {
+    event.preventDefault();
+    const formData = new FormData(elements.resendVerificationForm);
+    elements.resendVerificationButton.disabled = true;
+    setFormMessage(elements.resendVerificationMessage);
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/resend-verification`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                email: String(formData.get("email") || "").trim(),
+            }),
+        });
+        const data = await parseResponse(response);
+        if (!response.ok) {
+            throw new Error(
+                getErrorMessage(data, "Unable to resend verification email.")
+            );
+        }
+        setFormMessage(
+            elements.resendVerificationMessage,
+            data.message,
+            "success",
+        );
+    } catch (error) {
+        setFormMessage(
+            elements.resendVerificationMessage,
+            error.message,
+            "error",
+        );
+    } finally {
+        elements.resendVerificationButton.disabled = false;
+    }
+}
+
+async function verifyEmailToken(token) {
+    showAuthPanel("verify");
+    elements.verifyStatusIcon.textContent = "...";
+
+    if (!token) {
+        elements.verifyStatusIcon.textContent = "!";
+        elements.verifyStatusIcon.classList.add("error");
+        elements.verifyTitle.textContent = "Verification link is invalid";
+        elements.verifyMessage.textContent =
+            "Request a new verification email and try again.";
+        elements.verifyLoginButton.classList.remove("hidden");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/verify-email`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({token}),
+        });
+        const data = await parseResponse(response);
+        if (!response.ok) {
+            throw new Error(
+                getErrorMessage(data, "Unable to verify this email link.")
+            );
+        }
+        elements.verifyStatusIcon.textContent = "OK";
+        elements.verifyStatusIcon.classList.add("success");
+        elements.verifyTitle.textContent = "Email verified";
+        elements.verifyMessage.textContent =
+            "Your account is active. You can now sign in.";
+        window.history.replaceState({}, "", "/dashboard");
+    } catch (error) {
+        elements.verifyStatusIcon.textContent = "!";
+        elements.verifyStatusIcon.classList.add("error");
+        elements.verifyTitle.textContent = "Verification failed";
+        elements.verifyMessage.textContent = error.message;
+    }
+
+    elements.verifyLoginButton.classList.remove("hidden");
+}
+
+async function handleResetPassword(event) {
+    event.preventDefault();
+    const formData = new FormData(elements.resetPasswordForm);
+    const password = String(formData.get("password") || "");
+    const confirmation = String(
+        formData.get("password_confirmation") || ""
+    );
+    const token = new URLSearchParams(window.location.search).get("token");
+
+    setFormMessage(elements.resetPasswordMessage);
+    if (password !== confirmation) {
+        setFormMessage(
+            elements.resetPasswordMessage,
+            "Passwords do not match.",
+            "error",
+        );
+        return;
+    }
+    if (!token) {
+        setFormMessage(
+            elements.resetPasswordMessage,
+            "This password reset link is invalid.",
+            "error",
+        );
+        return;
+    }
+
+    elements.resetPasswordButton.disabled = true;
+    try {
+        const response = await fetch(`${API_BASE}/auth/reset-password`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({token, new_password: password}),
+        });
+        const data = await parseResponse(response);
+        if (!response.ok) {
+            throw new Error(
+                getErrorMessage(data, "Unable to reset your password.")
+            );
+        }
+        elements.resetPasswordForm.reset();
+        setFormMessage(
+            elements.resetPasswordMessage,
+            data.message,
+            "success",
+        );
+        window.history.replaceState({}, "", "/dashboard");
+    } catch (error) {
+        setFormMessage(
+            elements.resetPasswordMessage,
+            error.message,
+            "error",
+        );
+    } finally {
+        elements.resetPasswordButton.disabled = false;
+    }
+}
+
 function openUploadModal() {
     elements.uploadModal.classList.remove(
         "hidden"
@@ -1157,6 +1480,36 @@ function bindEvents() {
         handleLogin,
     );
 
+    elements.signupForm.addEventListener(
+        "submit",
+        handleSignup,
+    );
+
+    elements.forgotPasswordForm.addEventListener(
+        "submit",
+        handleForgotPassword,
+    );
+
+    elements.resendVerificationForm.addEventListener(
+        "submit",
+        handleResendVerification,
+    );
+
+    elements.resetPasswordForm.addEventListener(
+        "submit",
+        handleResetPassword,
+    );
+
+    elements.authPanelButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const panelName = button.dataset.authPanel;
+            if (panelName === "login") {
+                window.history.replaceState({}, "", "/dashboard");
+            }
+            showAuthPanel(panelName);
+        });
+    });
+
     elements.logoutButton.addEventListener(
         "click",
         logout,
@@ -1272,8 +1625,30 @@ function bindEvents() {
 async function initialize() {
     bindEvents();
 
+    const pathname = window.location.pathname;
+    const query = new URLSearchParams(window.location.search);
+
+    if (pathname === "/verify-email") {
+        showAuthView();
+        await verifyEmailToken(query.get("token"));
+        return;
+    }
+
+    if (pathname === "/reset-password") {
+        showAuthView();
+        showAuthPanel("reset");
+        return;
+    }
+
+    if (pathname === "/signup" && !state.accessToken) {
+        showAuthView();
+        showAuthPanel("signup");
+        return;
+    }
+
     if (!state.accessToken) {
         showAuthView();
+        showAuthPanel("login");
         return;
     }
 

@@ -85,62 +85,132 @@
 
             <div class="auth-card">
 
-                <div class="auth-card-header">
-                    <p class="eyebrow">
-                        WELCOME BACK
-                    </p>
-
-                    <h2>
-                        Sign in to API Sentry
-                    </h2>
-
-                    <p>
-                        Enter your registered email and password.
-                    </p>
+                <div id="authTabs" class="auth-tabs" role="tablist" aria-label="Account access">
+                    <button class="auth-tab active" type="button" role="tab"
+                        data-auth-panel="login">Sign In</button>
+                    <button class="auth-tab" type="button" role="tab"
+                        data-auth-panel="signup">Create Account</button>
                 </div>
 
-                <form id="loginForm">
+                <section id="loginPanel" class="auth-panel">
+                    <div class="auth-card-header">
+                        <p class="eyebrow">WELCOME BACK</p>
+                        <h2>Sign in to API Sentry</h2>
+                        <p>Enter your registered email and password.</p>
+                    </div>
+                    <form id="loginForm">
+                        <label for="loginEmail">Email address</label>
+                        <input id="loginEmail" name="email" type="email" autocomplete="email"
+                            placeholder="name@company.com" required>
+                        <div class="label-row">
+                            <label for="loginPassword">Password</label>
+                            <button class="text-button" type="button"
+                                data-auth-panel="forgot">Forgot password?</button>
+                        </div>
+                        <input id="loginPassword" name="password" type="password"
+                            autocomplete="current-password" placeholder="Enter your password" required>
+                        <button id="loginButton" class="button button-primary button-block"
+                            type="submit">Sign In</button>
+                    </form>
+                    <div id="authMessage" class="form-message" role="status" aria-live="polite"></div>
+                </section>
 
-                    <label for="loginEmail">
-                        Email address
-                    </label>
+                <section id="signupPanel" class="auth-panel hidden">
+                    <div class="auth-card-header">
+                        <p class="eyebrow">GET STARTED</p>
+                        <h2>Create your account</h2>
+                        <p>Start discovering and securing your APIs.</p>
+                    </div>
+                    <form id="signupForm">
+                        <label for="signupName">Full name</label>
+                        <input id="signupName" name="full_name" type="text"
+                            autocomplete="name" minlength="2" maxlength="100" required>
+                        <label for="signupEmail">Work email</label>
+                        <input id="signupEmail" name="email" type="email" autocomplete="email"
+                            placeholder="name@company.com" required>
+                        <label for="signupPassword">Password</label>
+                        <input id="signupPassword" name="password" type="password"
+                            autocomplete="new-password" minlength="8" maxlength="128" required>
+                        <p class="field-hint">Use 8+ characters with uppercase, lowercase, number and symbol.</p>
+                        <label for="signupPasswordConfirmation">Confirm password</label>
+                        <input id="signupPasswordConfirmation" name="password_confirmation"
+                            type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+                        <label class="checkbox-label" for="signupTerms">
+                            <input id="signupTerms" name="terms" type="checkbox" required>
+                            <span>I agree to the terms and privacy policy.</span>
+                        </label>
+                        <button id="signupButton" class="button button-primary button-block"
+                            type="submit">Create Account</button>
+                    </form>
+                    <div id="signupMessage" class="form-message" role="status" aria-live="polite"></div>
+                </section>
 
-                    <input
-                        id="loginEmail"
-                        name="email"
-                        type="email"
-                        autocomplete="email"
-                        placeholder="name@company.com"
-                        required
-                    >
+                <section id="forgotPanel" class="auth-panel hidden">
+                    <div class="auth-card-header">
+                        <p class="eyebrow">ACCOUNT RECOVERY</p>
+                        <h2>Reset your password</h2>
+                        <p>We will send reset instructions if the account exists.</p>
+                    </div>
+                    <form id="forgotPasswordForm">
+                        <label for="forgotEmail">Email address</label>
+                        <input id="forgotEmail" name="email" type="email" autocomplete="email" required>
+                        <button id="forgotPasswordButton" class="button button-primary button-block"
+                            type="submit">Send Reset Instructions</button>
+                    </form>
+                    <div id="forgotPasswordMessage" class="form-message" role="status" aria-live="polite"></div>
+                    <button class="text-button auth-back" type="button"
+                        data-auth-panel="login">Back to sign in</button>
+                </section>
 
-                    <label for="loginPassword">
-                        Password
-                    </label>
+                <section id="checkEmailPanel" class="auth-panel hidden">
+                    <div class="auth-status-icon">@</div>
+                    <div class="auth-card-header centered">
+                        <p class="eyebrow">CHECK YOUR INBOX</p>
+                        <h2>Verify your email</h2>
+                        <p id="checkEmailText">We sent a verification link to your email address.</p>
+                    </div>
+                    <form id="resendVerificationForm">
+                        <label for="resendEmail">Email address</label>
+                        <input id="resendEmail" name="email" type="email" autocomplete="email" required>
+                        <button id="resendVerificationButton" class="button button-secondary button-block"
+                            type="submit">Resend Verification Email</button>
+                    </form>
+                    <div id="resendVerificationMessage" class="form-message" role="status" aria-live="polite"></div>
+                    <button class="text-button auth-back" type="button"
+                        data-auth-panel="login">Back to sign in</button>
+                </section>
 
-                    <input
-                        id="loginPassword"
-                        name="password"
-                        type="password"
-                        autocomplete="current-password"
-                        placeholder="Enter your password"
-                        required
-                    >
+                <section id="verifyPanel" class="auth-panel hidden">
+                    <div id="verifyStatusIcon" class="auth-status-icon">...</div>
+                    <div class="auth-card-header centered">
+                        <p class="eyebrow">EMAIL VERIFICATION</p>
+                        <h2 id="verifyTitle">Verifying your email</h2>
+                        <p id="verifyMessage">Please wait while we activate your account.</p>
+                    </div>
+                    <button id="verifyLoginButton" class="button button-primary button-block hidden"
+                        type="button" data-auth-panel="login">Continue to Sign In</button>
+                </section>
 
-                    <button
-                        id="loginButton"
-                        class="button button-primary button-block"
-                        type="submit"
-                    >
-                        Sign In
-                    </button>
-
-                </form>
-
-                <div
-                    id="authMessage"
-                    class="form-message"
-                ></div>
+                <section id="resetPanel" class="auth-panel hidden">
+                    <div class="auth-card-header">
+                        <p class="eyebrow">CHOOSE A NEW PASSWORD</p>
+                        <h2>Reset your password</h2>
+                        <p>Enter a strong new password for your account.</p>
+                    </div>
+                    <form id="resetPasswordForm">
+                        <label for="resetPassword">New password</label>
+                        <input id="resetPassword" name="password" type="password"
+                            autocomplete="new-password" minlength="8" maxlength="128" required>
+                        <label for="resetPasswordConfirmation">Confirm new password</label>
+                        <input id="resetPasswordConfirmation" name="password_confirmation"
+                            type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+                        <button id="resetPasswordButton" class="button button-primary button-block"
+                            type="submit">Update Password</button>
+                    </form>
+                    <div id="resetPasswordMessage" class="form-message" role="status" aria-live="polite"></div>
+                    <button class="text-button auth-back" type="button"
+                        data-auth-panel="login">Back to sign in</button>
+                </section>
 
                 <div class="auth-footer">
                     API Sentry · Secure Code Intelligence
