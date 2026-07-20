@@ -1,0 +1,14 @@
+Hello {{ full_name }},
+
+The security scan for "{{ project_name }}" is complete.
+
+Security score: {{ security_score }}
+Critical findings: {{ critical_count }}
+High findings: {{ high_count }}
+Medium findings: {{ medium_count }}
+Low findings: {{ low_count }}
+
+View the security report:
+{{ report_url }}
+
+{{ app_name }}

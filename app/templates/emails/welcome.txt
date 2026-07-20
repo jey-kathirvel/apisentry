@@ -1,0 +1,11 @@
+Hello {{ full_name }},
+
+Welcome to {{ app_name }}.
+
+Your email has been verified successfully.
+
+Open your dashboard:
+{{ dashboard_url }}
+
+{{ app_name }}
+{{ support_email }}

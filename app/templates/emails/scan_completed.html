@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}
+Security scan completed
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 20px;">
+    Security scan completed
+</h1>
+
+<p>Hello {{ full_name }},</p>
+
+<p>
+    The security scan for
+    <strong>{{ project_name }}</strong>
+    is complete.
+</p>
+
+<table
+    role="presentation"
+    width="100%"
+    cellspacing="0"
+    cellpadding="10"
+    border="0"
+    style="
+        margin:24px 0;
+        background:#f8fafc;
+        border-radius:10px;
+    "
+>
+<tr>
+<td>
+    <strong>Security Score</strong>
+</td>
+<td>{{ security_score }}</td>
+</tr>
+<tr>
+<td>
+    <strong>Critical</strong>
+</td>
+<td>{{ critical_count }}</td>
+</tr>
+<tr>
+<td>
+    <strong>High</strong>
+</td>
+<td>{{ high_count }}</td>
+</tr>
+<tr>
+<td>
+    <strong>Medium</strong>
+</td>
+<td>{{ medium_count }}</td>
+</tr>
+<tr>
+<td>
+    <strong>Low</strong>
+</td>
+<td>{{ low_count }}</td>
+</tr>
+</table>
+
+<p style="margin:28px 0;">
+<a
+    href="{{ report_url }}"
+    style="
+        display:inline-block;
+        padding:14px 24px;
+        background:#2563eb;
+        color:#ffffff;
+        border-radius:8px;
+        text-decoration:none;
+        font-weight:700;
+    "
+>
+    View Security Report
+</a>
+</p>
+{% endblock %}

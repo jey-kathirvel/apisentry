@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>{{ page_title }}</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/css/project-dashboard.css"
+    >
+</head>
+
+<body>
+
+<div
+    id="toastContainer"
+    class="toast-container"
+></div>
+
+<div
+    id="authView"
+    class="auth-view"
+>
+    <div class="auth-shell">
+
+        <section class="auth-brand-panel">
+
+            <div class="brand-badge">
+                AS
+            </div>
+
+            <p class="eyebrow">
+                API SECURITY PLATFORM
+            </p>
+
+            <h1>
+                Secure every API before it reaches production.
+            </h1>
+
+            <p class="auth-description">
+                Upload your application source code, detect its technology
+                stack and prepare it for automated API security analysis.
+            </p>
+
+            <div class="feature-grid">
+
+                <div class="feature-item">
+                    <span class="feature-icon">01</span>
+
+                    <div>
+                        <strong>Secure Upload</strong>
+                        <small>ZIP, TAR and TAR.GZ projects</small>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <span class="feature-icon">02</span>
+
+                    <div>
+                        <strong>Stack Detection</strong>
+                        <small>Languages, frameworks and tools</small>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <span class="feature-icon">03</span>
+
+                    <div>
+                        <strong>API Analysis</strong>
+                        <small>Security scoring and findings</small>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="auth-form-panel">
+
+            <div class="auth-card">
+
+                <div class="auth-card-header">
+                    <p class="eyebrow">
+                        WELCOME BACK
+                    </p>
+
+                    <h2>
+                        Sign in to API Sentry
+                    </h2>
+
+                    <p>
+                        Enter your registered email and password.
+                    </p>
+                </div>
+
+                <form id="loginForm">
+
+                    <label for="loginEmail">
+                        Email address
+                    </label>
+
+                    <input
+                        id="loginEmail"
+                        name="email"
+                        type="email"
+                        autocomplete="email"
+                        placeholder="name@company.com"
+                        required
+                    >
+
+                    <label for="loginPassword">
+                        Password
+                    </label>
+
+                    <input
+                        id="loginPassword"
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Enter your password"
+                        required
+                    >
+
+                    <button
+                        id="loginButton"
+                        class="button button-primary button-block"
+                        type="submit"
+                    >
+                        Sign In
+                    </button>
+
+                </form>
+
+                <div
+                    id="authMessage"
+                    class="form-message"
+                ></div>
+
+                <div class="auth-footer">
+                    API Sentry · Secure Code Intelligence
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+</div>
+
+<div
+    id="dashboardView"
+    class="dashboard-view hidden"
+>
+
+    <aside
+        id="sidebar"
+        class="sidebar"
+    >
+
+        <div class="sidebar-brand">
+
+            <div class="brand-badge brand-badge-small">
+                AS
+            </div>
+
+            <div>
+                <strong>API Sentry</strong>
+                <small>Security Console</small>
+            </div>
+
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <a
+                href="#overview"
+                class="nav-link active"
+            >
+                <span>⌂</span>
+                Overview
+            </a>
+
+            <a
+                href="#projectsSection"
+                class="nav-link"
+            >
+                <span>▣</span>
+                Projects
+            </a>
+
+            <button
+                id="sidebarUploadButton"
+                class="nav-link nav-button"
+                type="button"
+            >
+                <span>＋</span>
+                Upload Project
+            </button>
+
+        </nav>
+
+        <div class="sidebar-footer">
+
+            <div class="sidebar-user">
+                <div
+                    id="sidebarUserAvatar"
+                    class="user-avatar"
+                >
+                    U
+                </div>
+
+                <div>
+                    <strong id="sidebarUserName">
+                        User
+                    </strong>
+
+                    <small id="sidebarUserEmail">
+                        —
+                    </small>
+                </div>
+            </div>
+
+            <button
+                id="logoutButton"
+                class="button button-ghost button-block"
+                type="button"
+            >
+                Sign Out
+            </button>
+
+        </div>
+
+    </aside>
+
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <div class="topbar-left">
+
+                <button
+                    id="mobileMenuButton"
+                    class="icon-button mobile-menu-button"
+                    type="button"
+                    aria-label="Open menu"
+                >
+                    ☰
+                </button>
+
+                <div>
+                    <p class="eyebrow">
+                        SECURITY WORKSPACE
+                    </p>
+
+                    <h1>
+                        Project Dashboard
+                    </h1>
+                </div>
+
+            </div>
+
+            <div class="topbar-actions">
+
+                <button
+                    id="refreshButton"
+                    class="button button-secondary"
+                    type="button"
+                >
+                    Refresh
+                </button>
+
+                <button
+                    id="uploadProjectButton"
+                    class="button button-primary"
+                    type="button"
+                >
+                    + Upload Project
+                </button>
+
+            </div>
+
+        </header>
+
+        <section
+            id="overview"
+            class="content-section"
+        >
+
+            <div class="welcome-banner">
+
+                <div>
+                    <p class="eyebrow light-eyebrow">
+                        API SENTRY
+                    </p>
+
+                    <h2>
+                        Discover, scan and strengthen your APIs.
+                    </h2>
+
+                    <p>
+                        Upload a project to detect its language,
+                        framework and prepare a security scan.
+                    </p>
+                </div>
+
+                <button
+                    id="bannerUploadButton"
+                    class="button button-light"
+                    type="button"
+                >
+                    Upload Source Code
+                </button>
+
+            </div>
+
+            <div class="metric-grid">
+
+                <article class="metric-card">
+                    <div class="metric-icon metric-purple">
+                        ▣
+                    </div>
+
+                    <div>
+                        <span>Total Projects</span>
+                        <strong id="totalProjectsMetric">0</strong>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-icon metric-blue">
+                        ◉
+                    </div>
+
+                    <div>
+                        <span>Ready to Scan</span>
+                        <strong id="readyProjectsMetric">0</strong>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-icon metric-orange">
+                        ◌
+                    </div>
+
+                    <div>
+                        <span>Scanning</span>
+                        <strong id="scanningProjectsMetric">0</strong>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-icon metric-green">
+                        ✓
+                    </div>
+
+                    <div>
+                        <span>Completed</span>
+                        <strong id="completedProjectsMetric">0</strong>
+                    </div>
+                </article>
+
+            </div>
+
+        </section>
+
+        <section
+            id="projectsSection"
+            class="content-section"
+        >
+
+            <div class="section-heading">
+
+                <div>
+                    <p class="eyebrow">
+                        SOURCE INVENTORY
+                    </p>
+
+                    <h2>
+                        Your Projects
+                    </h2>
+
+                    <p>
+                        Manage uploaded applications and start security scans.
+                    </p>
+                </div>
+
+                <div class="project-search">
+
+                    <input
+                        id="projectSearchInput"
+                        type="search"
+                        placeholder="Search projects..."
+                        aria-label="Search projects"
+                    >
+
+                </div>
+
+            </div>
+
+            <div
+                id="projectLoadingState"
+                class="state-card"
+            >
+                <div class="loader"></div>
+                <p>Loading projects...</p>
+            </div>
+
+            <div
+                id="projectEmptyState"
+                class="state-card hidden"
+            >
+                <div class="empty-icon">
+                    ⇧
+                </div>
+
+                <h3>
+                    No projects uploaded
+                </h3>
+
+                <p>
+                    Upload your first application archive to begin
+                    technology detection and API security analysis.
+                </p>
+
+                <button
+                    id="emptyUploadButton"
+                    class="button button-primary"
+                    type="button"
+                >
+                    Upload First Project
+                </button>
+            </div>
+
+            <div
+                id="projectsGrid"
+                class="projects-grid hidden"
+            ></div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<div
+    id="uploadModal"
+    class="modal hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="uploadModalTitle"
+>
+
+    <div class="modal-backdrop"></div>
+
+    <div class="modal-dialog">
+
+        <div class="modal-header">
+
+            <div>
+                <p class="eyebrow">
+                    NEW SECURITY PROJECT
+                </p>
+
+                <h2 id="uploadModalTitle">
+                    Upload Project
+                </h2>
+
+                <p>
+                    Supported formats: ZIP, TAR, TAR.GZ and TGZ.
+                </p>
+            </div>
+
+            <button
+                id="closeUploadModalButton"
+                class="icon-button"
+                type="button"
+                aria-label="Close upload dialog"
+            >
+                ×
+            </button>
+
+        </div>
+
+        <form
+            id="uploadForm"
+            class="modal-body"
+        >
+
+            <label for="projectName">
+                Project name
+            </label>
+
+            <input
+                id="projectName"
+                name="name"
+                type="text"
+                maxlength="200"
+                placeholder="Example: Customer API"
+                required
+            >
+
+            <label for="projectDescription">
+                Description
+            </label>
+
+            <textarea
+                id="projectDescription"
+                name="description"
+                rows="3"
+                placeholder="Brief description of the application"
+            ></textarea>
+
+            <label>
+                Source archive
+            </label>
+
+            <div
+                id="dropZone"
+                class="drop-zone"
+            >
+
+                <input
+                    id="projectFile"
+                    name="file"
+                    type="file"
+                    accept=".zip,.tar,.gz,.tgz,.tar.gz"
+                    required
+                >
+
+                <div class="drop-zone-content">
+
+                    <div class="upload-icon">
+                        ⇧
+                    </div>
+
+                    <strong>
+                        Drop your archive here
+                    </strong>
+
+                    <span>
+                        or click to select a file
+                    </span>
+
+                    <small>
+                        ZIP, TAR, TAR.GZ or TGZ
+                    </small>
+
+                </div>
+
+            </div>
+
+            <div
+                id="selectedFile"
+                class="selected-file hidden"
+            ></div>
+
+            <div
+                id="uploadProgressContainer"
+                class="upload-progress-container hidden"
+            >
+
+                <div class="upload-progress-header">
+                    <span>Uploading and analyzing...</span>
+                    <strong id="uploadProgressText">0%</strong>
+                </div>
+
+                <div class="progress-track">
+                    <div
+                        id="uploadProgressBar"
+                        class="progress-bar"
+                    ></div>
+                </div>
+
+            </div>
+
+            <div
+                id="uploadMessage"
+                class="form-message"
+            ></div>
+
+            <div class="modal-actions">
+
+                <button
+                    id="cancelUploadButton"
+                    class="button button-secondary"
+                    type="button"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    id="submitUploadButton"
+                    class="button button-primary"
+                    type="submit"
+                >
+                    Upload & Analyze
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script src="/static/js/project-dashboard.js"></script>
+
+</body>
+</html>

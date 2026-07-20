@@ -1,0 +1,11 @@
+Hello {{ full_name }},
+
+Verify your email address to activate your {{ app_name }} account.
+
+Verification link:
+{{ verification_url }}
+
+This link expires on {{ expires_at.strftime("%d %b %Y at %I:%M %p UTC") }}.
+
+{{ app_name }}
+{{ support_email }}

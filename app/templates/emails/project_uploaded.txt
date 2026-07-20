@@ -1,0 +1,11 @@
+Hello {{ full_name }},
+
+Your project "{{ project_name }}" was uploaded successfully.
+
+{% if language %}Language: {{ language }}
+{% endif %}{% if framework %}Framework: {{ framework }}
+{% endif %}
+View project:
+{{ project_url }}
+
+{{ app_name }}

@@ -1,0 +1,1292 @@
+"use strict";
+
+const API_BASE = "/api/v1";
+
+const state = {
+    accessToken: localStorage.getItem(
+        "apisentry_access_token"
+    ),
+    refreshToken: localStorage.getItem(
+        "apisentry_refresh_token"
+    ),
+    currentUser: null,
+    projects: [],
+};
+
+const elements = {
+    authView: document.getElementById("authView"),
+    dashboardView: document.getElementById(
+        "dashboardView"
+    ),
+    loginForm: document.getElementById("loginForm"),
+    loginButton: document.getElementById(
+        "loginButton"
+    ),
+    authMessage: document.getElementById(
+        "authMessage"
+    ),
+    logoutButton: document.getElementById(
+        "logoutButton"
+    ),
+    sidebar: document.getElementById("sidebar"),
+    mobileMenuButton: document.getElementById(
+        "mobileMenuButton"
+    ),
+    sidebarUserName: document.getElementById(
+        "sidebarUserName"
+    ),
+    sidebarUserEmail: document.getElementById(
+        "sidebarUserEmail"
+    ),
+    sidebarUserAvatar: document.getElementById(
+        "sidebarUserAvatar"
+    ),
+    uploadProjectButton: document.getElementById(
+        "uploadProjectButton"
+    ),
+    sidebarUploadButton: document.getElementById(
+        "sidebarUploadButton"
+    ),
+    bannerUploadButton: document.getElementById(
+        "bannerUploadButton"
+    ),
+    emptyUploadButton: document.getElementById(
+        "emptyUploadButton"
+    ),
+    refreshButton: document.getElementById(
+        "refreshButton"
+    ),
+    uploadModal: document.getElementById(
+        "uploadModal"
+    ),
+    closeUploadModalButton: document.getElementById(
+        "closeUploadModalButton"
+    ),
+    cancelUploadButton: document.getElementById(
+        "cancelUploadButton"
+    ),
+    uploadForm: document.getElementById(
+        "uploadForm"
+    ),
+    submitUploadButton: document.getElementById(
+        "submitUploadButton"
+    ),
+    projectFile: document.getElementById(
+        "projectFile"
+    ),
+    selectedFile: document.getElementById(
+        "selectedFile"
+    ),
+    dropZone: document.getElementById("dropZone"),
+    uploadMessage: document.getElementById(
+        "uploadMessage"
+    ),
+    uploadProgressContainer: document.getElementById(
+        "uploadProgressContainer"
+    ),
+    uploadProgressText: document.getElementById(
+        "uploadProgressText"
+    ),
+    uploadProgressBar: document.getElementById(
+        "uploadProgressBar"
+    ),
+    projectLoadingState: document.getElementById(
+        "projectLoadingState"
+    ),
+    projectEmptyState: document.getElementById(
+        "projectEmptyState"
+    ),
+    projectsGrid: document.getElementById(
+        "projectsGrid"
+    ),
+    projectSearchInput: document.getElementById(
+        "projectSearchInput"
+    ),
+    totalProjectsMetric: document.getElementById(
+        "totalProjectsMetric"
+    ),
+    readyProjectsMetric: document.getElementById(
+        "readyProjectsMetric"
+    ),
+    scanningProjectsMetric: document.getElementById(
+        "scanningProjectsMetric"
+    ),
+    completedProjectsMetric: document.getElementById(
+        "completedProjectsMetric"
+    ),
+    toastContainer: document.getElementById(
+        "toastContainer"
+    ),
+};
+
+function setTokens(
+    accessToken,
+    refreshToken,
+) {
+    state.accessToken = accessToken;
+    state.refreshToken = refreshToken;
+
+    if (accessToken) {
+        localStorage.setItem(
+            "apisentry_access_token",
+            accessToken,
+        );
+    } else {
+        localStorage.removeItem(
+            "apisentry_access_token"
+        );
+    }
+
+    if (refreshToken) {
+        localStorage.setItem(
+            "apisentry_refresh_token",
+            refreshToken,
+        );
+    } else {
+        localStorage.removeItem(
+            "apisentry_refresh_token"
+        );
+    }
+}
+
+function clearSession() {
+    state.currentUser = null;
+    state.projects = [];
+
+    setTokens(null, null);
+}
+
+function showAuthView() {
+    elements.authView.classList.remove("hidden");
+    elements.dashboardView.classList.add("hidden");
+}
+
+function showDashboardView() {
+    elements.authView.classList.add("hidden");
+    elements.dashboardView.classList.remove("hidden");
+}
+
+function setFormMessage(
+    element,
+    message = "",
+    type = "",
+) {
+    element.textContent = message;
+    element.className = "form-message";
+
+    if (type) {
+        element.classList.add(type);
+    }
+}
+
+function showToast(
+    message,
+    type = "success",
+) {
+    const toast = document.createElement("div");
+
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    elements.toastContainer.appendChild(toast);
+
+    window.setTimeout(
+        () => {
+            toast.remove();
+        },
+        4200,
+    );
+}
+
+async function parseResponse(response) {
+    const contentType = response.headers.get(
+        "content-type"
+    ) || "";
+
+    if (
+        contentType.includes(
+            "application/json"
+        )
+    ) {
+        return response.json();
+    }
+
+    const text = await response.text();
+
+    return {
+        detail: text || response.statusText,
+    };
+}
+
+async function refreshAccessToken() {
+    if (!state.refreshToken) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(
+            `${API_BASE}/auth/refresh`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+                body: JSON.stringify({
+                    refresh_token:
+                        state.refreshToken,
+                }),
+            },
+        );
+
+        if (!response.ok) {
+            clearSession();
+            return false;
+        }
+
+        const data = await response.json();
+
+        setTokens(
+            data.access_token,
+            data.refresh_token
+                || state.refreshToken,
+        );
+
+        return true;
+
+    } catch (error) {
+        console.error(error);
+        clearSession();
+
+        return false;
+    }
+}
+
+async function apiFetch(
+    path,
+    options = {},
+    retry = true,
+) {
+    const headers = new Headers(
+        options.headers || {}
+    );
+
+    if (
+        state.accessToken
+        && !headers.has("Authorization")
+    ) {
+        headers.set(
+            "Authorization",
+            `Bearer ${state.accessToken}`,
+        );
+    }
+
+    const response = await fetch(
+        `${API_BASE}${path}`,
+        {
+            ...options,
+            headers,
+        },
+    );
+
+    if (
+        response.status === 401
+        && retry
+        && state.refreshToken
+    ) {
+        const refreshed = await refreshAccessToken();
+
+        if (refreshed) {
+            return apiFetch(
+                path,
+                options,
+                false,
+            );
+        }
+    }
+
+    return response;
+}
+
+function getStatusClass(status) {
+    const normalized = (
+        status || "uploaded"
+    ).toLowerCase();
+
+    const allowed = new Set([
+        "ready",
+        "scanning",
+        "completed",
+        "failed",
+        "uploaded",
+    ]);
+
+    return allowed.has(normalized)
+        ? normalized
+        : "uploaded";
+}
+
+function getFrameworkShortName(framework) {
+    if (!framework) {
+        return "API";
+    }
+
+    const aliases = {
+        "FastAPI": "FA",
+        "Django": "DJ",
+        "Flask": "FL",
+        "Spring Boot": "SB",
+        "Next.js": "NX",
+        "Express": "EX",
+        "NestJS": "NS",
+        "Laravel": "LV",
+        "ASP.NET Core": "NT",
+        "Flutter": "FT",
+        "React": "RE",
+        "Vue": "VU",
+        "Angular": "AN",
+    };
+
+    return aliases[framework]
+        || framework
+            .replace(/[^A-Za-z]/g, "")
+            .slice(0, 2)
+            .toUpperCase();
+}
+
+function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) {
+        return "—";
+    }
+
+    const units = [
+        "B",
+        "KB",
+        "MB",
+        "GB",
+    ];
+
+    let value = bytes;
+    let unitIndex = 0;
+
+    while (
+        value >= 1024
+        && unitIndex < units.length - 1
+    ) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+
+    return `${
+        value.toFixed(
+            unitIndex === 0 ? 0 : 1
+        )
+    } ${units[unitIndex]}`;
+}
+
+function formatDate(value) {
+    if (!value) {
+        return "—";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "—";
+    }
+
+    return new Intl.DateTimeFormat(
+        undefined,
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        },
+    ).format(date);
+}
+
+function escapeHtml(value) {
+    const element = document.createElement("div");
+
+    element.textContent = value ?? "";
+
+    return element.innerHTML;
+}
+
+function updateMetrics(projects) {
+    const countStatus = (status) => (
+        projects.filter(
+            (project) =>
+                String(project.status)
+                    .toLowerCase()
+                === status
+        ).length
+    );
+
+    elements.totalProjectsMetric.textContent =
+        projects.length;
+
+    elements.readyProjectsMetric.textContent =
+        countStatus("ready");
+
+    elements.scanningProjectsMetric.textContent =
+        countStatus("scanning");
+
+    elements.completedProjectsMetric.textContent =
+        countStatus("completed");
+}
+
+function renderProjects(projects) {
+    elements.projectLoadingState.classList.add(
+        "hidden"
+    );
+
+    updateMetrics(state.projects);
+
+    if (projects.length === 0) {
+        elements.projectsGrid.classList.add(
+            "hidden"
+        );
+
+        elements.projectEmptyState.classList.remove(
+            "hidden"
+        );
+
+        return;
+    }
+
+    elements.projectEmptyState.classList.add(
+        "hidden"
+    );
+
+    elements.projectsGrid.classList.remove(
+        "hidden"
+    );
+
+    elements.projectsGrid.innerHTML = projects
+        .map((project) => {
+            const status = getStatusClass(
+                project.status
+            );
+
+            const description = (
+                project.description
+                || "No description provided."
+            );
+
+            const canScan = ![
+                "scanning",
+            ].includes(status);
+
+            return `
+                <article
+                    class="project-card"
+                    data-project-id="${project.id}"
+                >
+                    <div class="project-card-top">
+
+                        <div class="project-identity">
+
+                            <div class="framework-icon">
+                                ${escapeHtml(
+                                    getFrameworkShortName(
+                                        project.detected_framework
+                                    )
+                                )}
+                            </div>
+
+                            <div>
+                                <h3 class="project-name">
+                                    ${escapeHtml(project.name)}
+                                </h3>
+
+                                <small>
+                                    ${escapeHtml(
+                                        project.detected_framework
+                                        || "Framework pending"
+                                    )}
+                                </small>
+                            </div>
+
+                        </div>
+
+                        <span
+                            class="status-badge status-${status}"
+                        >
+                            ${escapeHtml(status)}
+                        </span>
+
+                    </div>
+
+                    <p class="project-description">
+                        ${escapeHtml(description)}
+                    </p>
+
+                    <div class="project-meta-grid">
+
+                        <div class="project-meta-item">
+                            <span>Language</span>
+                            <strong>
+                                ${escapeHtml(
+                                    project.detected_language
+                                    || "Unknown"
+                                )}
+                            </strong>
+                        </div>
+
+                        <div class="project-meta-item">
+                            <span>Version</span>
+                            <strong>
+                                ${escapeHtml(
+                                    project.version
+                                    || "—"
+                                )}
+                            </strong>
+                        </div>
+
+                        <div class="project-meta-item">
+                            <span>API Count</span>
+                            <strong>
+                                ${Number(
+                                    project.api_count || 0
+                                )}
+                            </strong>
+                        </div>
+
+                        <div class="project-meta-item">
+                            <span>Security Score</span>
+                            <strong>
+                                ${Number(
+                                    project.security_score || 0
+                                )}/100
+                            </strong>
+                        </div>
+
+                        <div class="project-meta-item">
+                            <span>Uploaded</span>
+                            <strong>
+                                ${formatDate(
+                                    project.created_at
+                                )}
+                            </strong>
+                        </div>
+
+                        <div class="project-meta-item">
+                            <span>Project ID</span>
+                            <strong>
+                                #${Number(project.id)}
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    <div class="project-actions">
+
+                        <button
+                            class="button button-primary scan-button"
+                            type="button"
+                            data-project-id="${project.id}"
+                            ${canScan ? "" : "disabled"}
+                        >
+                            ${
+                                status === "scanning"
+                                    ? "Scanning..."
+                                    : "Start Scan"
+                            }
+                        </button>
+
+                        <button
+                            class="button button-danger delete-button"
+                            type="button"
+                            data-project-id="${project.id}"
+                        >
+                            Delete
+                        </button>
+
+                    </div>
+
+                </article>
+            `;
+        })
+        .join("");
+
+    bindProjectActions();
+}
+
+function bindProjectActions() {
+    document
+        .querySelectorAll(".scan-button")
+        .forEach((button) => {
+            button.addEventListener(
+                "click",
+                () => {
+                    startScan(
+                        Number(
+                            button.dataset.projectId
+                        )
+                    );
+                },
+            );
+        });
+
+    document
+        .querySelectorAll(".delete-button")
+        .forEach((button) => {
+            button.addEventListener(
+                "click",
+                () => {
+                    deleteProject(
+                        Number(
+                            button.dataset.projectId
+                        )
+                    );
+                },
+            );
+        });
+}
+
+async function loadCurrentUser() {
+    const response = await apiFetch(
+        "/auth/me"
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Your session has expired."
+        );
+    }
+
+    state.currentUser =
+        await response.json();
+
+    const name = (
+        state.currentUser.full_name
+        || state.currentUser.email
+        || "User"
+    );
+
+    elements.sidebarUserName.textContent = name;
+
+    elements.sidebarUserEmail.textContent =
+        state.currentUser.email || "—";
+
+    elements.sidebarUserAvatar.textContent =
+        name.trim().charAt(0).toUpperCase() || "U";
+}
+
+async function loadProjects() {
+    elements.projectLoadingState.classList.remove(
+        "hidden"
+    );
+
+    elements.projectEmptyState.classList.add(
+        "hidden"
+    );
+
+    elements.projectsGrid.classList.add(
+        "hidden"
+    );
+
+    try {
+        const response = await apiFetch(
+            "/projects"
+        );
+
+        const data = await parseResponse(
+            response
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || "Unable to load projects."
+            );
+        }
+
+        state.projects = Array.isArray(
+            data.projects
+        )
+            ? data.projects
+            : [];
+
+        renderProjects(state.projects);
+
+    } catch (error) {
+        elements.projectLoadingState.classList.add(
+            "hidden"
+        );
+
+        elements.projectEmptyState.classList.remove(
+            "hidden"
+        );
+
+        showToast(
+            error.message,
+            "error",
+        );
+    }
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+
+    const formData = new FormData(
+        elements.loginForm
+    );
+
+    const payload = {
+        email: String(
+            formData.get("email") || ""
+        ).trim(),
+        password: String(
+            formData.get("password") || ""
+        ),
+    };
+
+    setFormMessage(
+        elements.authMessage
+    );
+
+    elements.loginButton.disabled = true;
+    elements.loginButton.textContent =
+        "Signing In...";
+
+    try {
+        const response = await fetch(
+            `${API_BASE}/auth/login`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+                body: JSON.stringify(payload),
+            },
+        );
+
+        const data = await parseResponse(
+            response
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || "Unable to sign in."
+            );
+        }
+
+        setTokens(
+            data.access_token,
+            data.refresh_token,
+        );
+
+        await loadCurrentUser();
+
+        showDashboardView();
+        await loadProjects();
+
+        elements.loginForm.reset();
+
+    } catch (error) {
+        clearSession();
+
+        setFormMessage(
+            elements.authMessage,
+            error.message,
+            "error",
+        );
+
+    } finally {
+        elements.loginButton.disabled = false;
+        elements.loginButton.textContent =
+            "Sign In";
+    }
+}
+
+function openUploadModal() {
+    elements.uploadModal.classList.remove(
+        "hidden"
+    );
+
+    document.body.style.overflow = "hidden";
+
+    window.setTimeout(
+        () => {
+            document
+                .getElementById("projectName")
+                .focus();
+        },
+        50,
+    );
+}
+
+function closeUploadModal() {
+    elements.uploadModal.classList.add(
+        "hidden"
+    );
+
+    document.body.style.overflow = "";
+
+    elements.uploadForm.reset();
+
+    elements.selectedFile.classList.add(
+        "hidden"
+    );
+
+    elements.uploadProgressContainer.classList.add(
+        "hidden"
+    );
+
+    elements.uploadProgressBar.style.width = "0%";
+    elements.uploadProgressText.textContent = "0%";
+
+    setFormMessage(
+        elements.uploadMessage
+    );
+}
+
+function updateSelectedFile() {
+    const file = elements.projectFile.files[0];
+
+    if (!file) {
+        elements.selectedFile.classList.add(
+            "hidden"
+        );
+
+        elements.selectedFile.innerHTML = "";
+
+        return;
+    }
+
+    elements.selectedFile.innerHTML = `
+        <strong>${escapeHtml(file.name)}</strong>
+        · ${formatBytes(file.size)}
+    `;
+
+    elements.selectedFile.classList.remove(
+        "hidden"
+    );
+}
+
+async function handleUpload(event) {
+    event.preventDefault();
+
+    const file = elements.projectFile.files[0];
+
+    if (!file) {
+        setFormMessage(
+            elements.uploadMessage,
+            "Select a project archive.",
+            "error",
+        );
+
+        return;
+    }
+
+    const formData = new FormData(
+        elements.uploadForm
+    );
+
+    setFormMessage(
+        elements.uploadMessage
+    );
+
+    elements.submitUploadButton.disabled = true;
+    elements.cancelUploadButton.disabled = true;
+
+    elements.submitUploadButton.textContent =
+        "Uploading...";
+
+    elements.uploadProgressContainer.classList.remove(
+        "hidden"
+    );
+
+    let progress = 8;
+
+    const progressTimer = window.setInterval(
+        () => {
+            if (progress < 88) {
+                progress += Math.max(
+                    1,
+                    Math.round(
+                        (88 - progress) * 0.08
+                    )
+                );
+
+                elements.uploadProgressBar.style.width =
+                    `${progress}%`;
+
+                elements.uploadProgressText.textContent =
+                    `${progress}%`;
+            }
+        },
+        280,
+    );
+
+    try {
+        const response = await apiFetch(
+            "/projects/upload",
+            {
+                method: "POST",
+                body: formData,
+            },
+        );
+
+        const data = await parseResponse(
+            response
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || "Project upload failed."
+            );
+        }
+
+        progress = 100;
+
+        elements.uploadProgressBar.style.width =
+            "100%";
+
+        elements.uploadProgressText.textContent =
+            "100%";
+
+        setFormMessage(
+            elements.uploadMessage,
+            "Project uploaded successfully.",
+            "success",
+        );
+
+        showToast(
+            `${data.name} uploaded successfully.`,
+            "success",
+        );
+
+        await loadProjects();
+
+        window.setTimeout(
+            closeUploadModal,
+            550,
+        );
+
+    } catch (error) {
+        setFormMessage(
+            elements.uploadMessage,
+            error.message,
+            "error",
+        );
+
+    } finally {
+        window.clearInterval(progressTimer);
+
+        elements.submitUploadButton.disabled =
+            false;
+
+        elements.cancelUploadButton.disabled =
+            false;
+
+        elements.submitUploadButton.textContent =
+            "Upload & Analyze";
+    }
+}
+
+async function startScan(projectId) {
+    const project = state.projects.find(
+        (item) => item.id === projectId
+    );
+
+    if (!project) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(
+            `/projects/${projectId}/scan`,
+            {
+                method: "POST",
+            },
+        );
+
+        const data = await parseResponse(
+            response
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || "Unable to start scan."
+            );
+        }
+
+        project.status = "scanning";
+
+        renderProjects(
+            filterProjects(
+                elements.projectSearchInput.value
+            )
+        );
+
+        showToast(
+            `Security scan queued for ${project.name}.`,
+            "success",
+        );
+
+    } catch (error) {
+        showToast(
+            error.message,
+            "error",
+        );
+    }
+}
+
+async function deleteProject(projectId) {
+    const project = state.projects.find(
+        (item) => item.id === projectId
+    );
+
+    if (!project) {
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `Delete "${project.name}" and its uploaded source files?`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(
+            `/projects/${projectId}`,
+            {
+                method: "DELETE",
+            },
+        );
+
+        const data = await parseResponse(
+            response
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail
+                || "Unable to delete project."
+            );
+        }
+
+        state.projects = state.projects.filter(
+            (item) => item.id !== projectId
+        );
+
+        renderProjects(
+            filterProjects(
+                elements.projectSearchInput.value
+            )
+        );
+
+        showToast(
+            `${project.name} deleted.`,
+            "success",
+        );
+
+    } catch (error) {
+        showToast(
+            error.message,
+            "error",
+        );
+    }
+}
+
+function filterProjects(query) {
+    const normalized = String(query || "")
+        .trim()
+        .toLowerCase();
+
+    if (!normalized) {
+        return state.projects;
+    }
+
+    return state.projects.filter(
+        (project) => {
+            const searchable = [
+                project.name,
+                project.description,
+                project.detected_language,
+                project.detected_framework,
+                project.status,
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+            return searchable.includes(
+                normalized
+            );
+        },
+    );
+}
+
+async function logout() {
+    try {
+        if (state.accessToken) {
+            await apiFetch(
+                "/auth/logout",
+                {
+                    method: "POST",
+                },
+                false,
+            );
+        }
+    } catch (error) {
+        console.error(error);
+    }
+
+    clearSession();
+    showAuthView();
+
+    showToast(
+        "Signed out successfully.",
+        "success",
+    );
+}
+
+function bindEvents() {
+    elements.loginForm.addEventListener(
+        "submit",
+        handleLogin,
+    );
+
+    elements.logoutButton.addEventListener(
+        "click",
+        logout,
+    );
+
+    [
+        elements.uploadProjectButton,
+        elements.sidebarUploadButton,
+        elements.bannerUploadButton,
+        elements.emptyUploadButton,
+    ].forEach((button) => {
+        button.addEventListener(
+            "click",
+            openUploadModal,
+        );
+    });
+
+    elements.closeUploadModalButton.addEventListener(
+        "click",
+        closeUploadModal,
+    );
+
+    elements.cancelUploadButton.addEventListener(
+        "click",
+        closeUploadModal,
+    );
+
+    elements.uploadModal
+        .querySelector(".modal-backdrop")
+        .addEventListener(
+            "click",
+            closeUploadModal,
+        );
+
+    elements.uploadForm.addEventListener(
+        "submit",
+        handleUpload,
+    );
+
+    elements.projectFile.addEventListener(
+        "change",
+        updateSelectedFile,
+    );
+
+    elements.refreshButton.addEventListener(
+        "click",
+        loadProjects,
+    );
+
+    elements.projectSearchInput.addEventListener(
+        "input",
+        (event) => {
+            renderProjects(
+                filterProjects(
+                    event.target.value
+                )
+            );
+        },
+    );
+
+    elements.mobileMenuButton.addEventListener(
+        "click",
+        () => {
+            elements.sidebar.classList.toggle(
+                "open"
+            );
+        },
+    );
+
+    elements.dropZone.addEventListener(
+        "dragover",
+        (event) => {
+            event.preventDefault();
+
+            elements.dropZone.classList.add(
+                "dragging"
+            );
+        },
+    );
+
+    elements.dropZone.addEventListener(
+        "dragleave",
+        () => {
+            elements.dropZone.classList.remove(
+                "dragging"
+            );
+        },
+    );
+
+    elements.dropZone.addEventListener(
+        "drop",
+        () => {
+            elements.dropZone.classList.remove(
+                "dragging"
+            );
+        },
+    );
+
+    document.addEventListener(
+        "keydown",
+        (event) => {
+            if (
+                event.key === "Escape"
+                && !elements.uploadModal.classList
+                    .contains("hidden")
+            ) {
+                closeUploadModal();
+            }
+        },
+    );
+}
+
+async function initialize() {
+    bindEvents();
+
+    if (!state.accessToken) {
+        showAuthView();
+        return;
+    }
+
+    try {
+        await loadCurrentUser();
+
+        showDashboardView();
+        await loadProjects();
+
+    } catch (error) {
+        clearSession();
+        showAuthView();
+    }
+}
+
+initialize();

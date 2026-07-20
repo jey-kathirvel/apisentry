@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}
+Verify your email
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 20px;">
+    Verify your email address
+</h1>
+
+<p>Hello {{ full_name }},</p>
+
+<p>
+    Verify your email address to activate your
+    {{ app_name }} account.
+</p>
+
+<p style="margin:28px 0;">
+<a
+    href="{{ verification_url }}"
+    style="
+        display:inline-block;
+        padding:14px 24px;
+        background:#2563eb;
+        color:#ffffff;
+        border-radius:8px;
+        text-decoration:none;
+        font-weight:700;
+    "
+>
+    Verify Email Address
+</a>
+</p>
+
+<p>
+    This link expires on
+    {{ expires_at.strftime("%d %b %Y at %I:%M %p UTC") }}.
+</p>
+
+<p style="word-break:break-all;">
+    {{ verification_url }}
+</p>
+{% endblock %}
