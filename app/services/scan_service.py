@@ -1,0 +1,319 @@
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.db.session import SessionLocal
+from app.models.api_parameter import APIParameter, ParameterLocation
+from app.models.api_response import APIResponse
+from app.models.discovered_api import (
+    AuthenticationType,
+    DiscoveredAPI,
+    HttpMethod,
+)
+from app.models.project import Project, ProjectStatus
+from app.models.project_upload import ProjectUpload
+from app.models.scan_job import ScanJob, ScanStatus
+from app.services.discovery.models import EndpointDiscovery
+from app.services.fastapi_ast_discovery import FastAPIASTDiscovery
+from app.services.security.analyzer import SecurityAnalyzer
+from app.services.security.report_exporter import SecurityReportExporter
+from app.services.security.report_generator import SecurityReportGenerator
+from app.services.security.source_analysis import (
+    SourceAnalysisContext,
+    SourceAnalysisService,
+    registry,
+)
+from app.services.source_code_walker import SourceCodeWalker
+
+
+SOURCE_SEVERITY_WEIGHTS = {
+    "critical": 25,
+    "high": 15,
+    "medium": 8,
+    "low": 3,
+    "info": 0,
+}
+
+
+class ScanExecutionError(RuntimeError):
+    pass
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+def _report_directory(
+    project_id: int,
+    scan_job_id: int,
+    report_root: Path | None = None,
+) -> Path:
+    root = Path(report_root or settings.report_storage_path)
+    output = root / str(project_id) / str(scan_job_id)
+    output.mkdir(parents=True, exist_ok=True)
+    return output
+
+
+def report_path(
+    project_id: int,
+    scan_job_id: int,
+    extension: str,
+    report_root: Path | None = None,
+) -> Path:
+    if extension not in {"json", "html"}:
+        raise ValueError("Unsupported report format.")
+
+    return _report_directory(
+        project_id,
+        scan_job_id,
+        report_root,
+    ) / f"security-report.{extension}"
+
+
+def _source_score(source_result) -> int:
+    penalty = sum(
+        SOURCE_SEVERITY_WEIGHTS.get(issue.severity.value, 0)
+        for issue in source_result.issues
+    )
+    return max(0, 100 - penalty)
+
+
+def _persist_discovery(
+    db: Session,
+    *,
+    project_id: int,
+    scan_job_id: int,
+    endpoints: list[EndpointDiscovery],
+    project_root: Path,
+    framework: str | None,
+    language: str | None,
+) -> None:
+    db.execute(
+        delete(DiscoveredAPI).where(
+            DiscoveredAPI.project_id == project_id,
+        )
+    )
+    db.flush()
+
+    for endpoint in endpoints:
+        source_path = Path(endpoint.file_path)
+        try:
+            source_file = source_path.resolve().relative_to(
+                project_root.resolve()
+            ).as_posix()
+        except ValueError:
+            source_file = source_path.name
+
+        method = str(endpoint.method).upper()
+        if method not in HttpMethod.__members__:
+            method = "ANY"
+
+        record = DiscoveredAPI(
+            project_id=project_id,
+            scan_job_id=scan_job_id,
+            http_method=HttpMethod[method],
+            path=endpoint.full_path,
+            normalized_path=endpoint.full_path,
+            router_prefix=endpoint.router_prefix or None,
+            operation_id=endpoint.operation_id,
+            function_name=endpoint.function_name,
+            framework=framework,
+            language=language,
+            source_file=source_file,
+            line_number=endpoint.line_number,
+            authentication_required=endpoint.authentication_required,
+            authentication_type=(
+                AuthenticationType.UNKNOWN
+                if endpoint.authentication_required
+                else AuthenticationType.PUBLIC
+            ),
+            tags=list(endpoint.tags),
+            dependencies=list(endpoint.dependencies),
+            response_model=endpoint.response_model,
+            response_status_code=(
+                endpoint.default_status_code or endpoint.status_code
+            ),
+            summary=endpoint.summary,
+            description=endpoint.description,
+            deprecated=endpoint.deprecated,
+            metadata_json={
+                "permission_required": endpoint.permission_required,
+                "security_schemes": list(endpoint.security_schemes),
+                "security_scopes": list(endpoint.security_scopes),
+            },
+        )
+        db.add(record)
+        db.flush()
+
+        for parameter in endpoint.parameters:
+            location = str(parameter.location).upper()
+            if location not in ParameterLocation.__members__:
+                location = "UNKNOWN"
+
+            db.add(
+                APIParameter(
+                    discovered_api_id=record.id,
+                    name=parameter.name,
+                    location=ParameterLocation[location],
+                    data_type=parameter.python_type,
+                    required=parameter.required,
+                    default_value=parameter.default_value,
+                    description=parameter.description,
+                    example_value=parameter.example,
+                )
+            )
+
+        for response in endpoint.responses:
+            db.add(
+                APIResponse(
+                    discovered_api_id=record.id,
+                    status_code=str(response.status_code),
+                    description=response.description,
+                    response_model=response.model,
+                )
+            )
+
+
+def execute_scan(
+    db: Session,
+    scan_job_id: int,
+    *,
+    report_root: Path | None = None,
+) -> None:
+    scan = db.get(ScanJob, scan_job_id)
+    if scan is None:
+        raise ScanExecutionError("Scan job not found.")
+
+    project = db.get(Project, scan.project_id)
+    if project is None:
+        raise ScanExecutionError("Project not found.")
+    upload = db.scalar(
+        select(ProjectUpload)
+        .where(ProjectUpload.project_id == project.id)
+        .order_by(ProjectUpload.uploaded_at.desc())
+        .limit(1)
+    )
+    if upload is None:
+        raise ScanExecutionError("Project upload not found.")
+
+    project_root = Path(upload.storage_path).resolve()
+    scan.status = ScanStatus.RUNNING
+    scan.progress = 10
+    scan.started_at = _utcnow()
+    scan.error_message = None
+    project.status = ProjectStatus.SCANNING
+    db.commit()
+
+    try:
+        if not project_root.is_dir():
+            raise ScanExecutionError("Uploaded project source is unavailable.")
+
+        walk_result = SourceCodeWalker().walk(project_root)
+        python_files = [
+            source.absolute_path
+            for source in walk_result.source_files
+            if source.language == "Python"
+        ]
+        scan.progress = 30
+        db.commit()
+
+        discovery = FastAPIASTDiscovery()
+        endpoints = discovery.discover_directory(python_files)
+        scan.progress = 50
+        db.commit()
+
+        endpoint_result = SecurityAnalyzer().analyze_endpoints(endpoints)
+        endpoint_result.project_id = project.id
+        endpoint_result.project_name = project.name
+        endpoint_result.framework = project.detected_framework
+
+        source_result = SourceAnalysisService(
+            analyzer_registry=registry,
+        ).analyze(
+            context=SourceAnalysisContext(
+                project_root=project_root,
+                project_id=project.id,
+                project_name=project.name,
+                framework=project.detected_framework,
+                language=project.detected_language,
+            )
+        )
+        scan.progress = 70
+        db.commit()
+
+        _persist_discovery(
+            db,
+            project_id=project.id,
+            scan_job_id=scan.id,
+            endpoints=endpoints,
+            project_root=project_root,
+            framework=project.detected_framework,
+            language=project.detected_language,
+        )
+
+        source_score = _source_score(source_result)
+        overall_score = round((endpoint_result.score + source_score) / 2)
+        report = SecurityReportGenerator.generate(endpoint_result)
+        report["project"] = {
+            "id": project.id,
+            "name": project.name,
+            "framework": project.detected_framework,
+            "language": project.detected_language,
+        }
+        report["scan"] = {
+            "id": scan.id,
+            "endpoint_count": len(endpoints),
+            "discovery_errors": discovery.get_errors(),
+            "files_scanned": source_result.files_scanned,
+        }
+        report["source_analysis"] = source_result.to_dict()
+        report["summary"]["endpoint_score"] = endpoint_result.score
+        report["summary"]["source_score"] = source_score
+        report["summary"]["score"] = overall_score
+
+        json_path = report_path(project.id, scan.id, "json", report_root)
+        json_path.write_text(
+            json.dumps(report, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        SecurityReportExporter.export_html(
+            endpoint_result,
+            report_path(project.id, scan.id, "html", report_root),
+        )
+
+        project.api_count = len(endpoints)
+        project.security_score = overall_score
+        project.status = ProjectStatus.COMPLETED
+        scan.status = ScanStatus.COMPLETED
+        scan.progress = 100
+        scan.completed_at = _utcnow()
+        db.commit()
+    except Exception:
+        db.rollback()
+        failed_scan = db.get(ScanJob, scan_job_id)
+        if failed_scan is not None:
+            failed_scan.status = ScanStatus.FAILED
+            failed_scan.progress = 100
+            failed_scan.completed_at = _utcnow()
+            failed_scan.error_message = "Security scan failed."
+            failed_project = db.get(Project, failed_scan.project_id)
+            if failed_project is not None:
+                failed_project.status = ProjectStatus.FAILED
+            db.commit()
+        raise
+
+
+def run_scan_job(scan_job_id: int) -> None:
+    with SessionLocal() as db:
+        try:
+            execute_scan(db, scan_job_id)
+        except Exception:
+            # State is recorded by execute_scan; background tasks must not
+            # surface internal project details through the HTTP response.
+            return

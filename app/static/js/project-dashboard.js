@@ -687,6 +687,26 @@ function renderProjects(projects) {
                             Delete
                         </button>
 
+                        ${status === "completed" ? `
+                            <button
+                                class="button button-secondary report-button"
+                                type="button"
+                                data-project-id="${project.id}"
+                                data-report-format="html"
+                            >
+                                View Report
+                            </button>
+
+                            <button
+                                class="text-button report-button"
+                                type="button"
+                                data-project-id="${project.id}"
+                                data-report-format="json"
+                            >
+                                Download JSON
+                            </button>
+                        ` : ""}
+
                     </div>
 
                 </article>
@@ -723,6 +743,20 @@ function bindProjectActions() {
                         Number(
                             button.dataset.projectId
                         )
+                    );
+                },
+            );
+        });
+
+    document
+        .querySelectorAll(".report-button")
+        .forEach((button) => {
+            button.addEventListener(
+                "click",
+                () => {
+                    downloadReport(
+                        Number(button.dataset.projectId),
+                        button.dataset.reportFormat,
                     );
                 },
             );
@@ -1354,11 +1388,86 @@ async function startScan(projectId) {
             "success",
         );
 
+        pollScan(projectId, project.name);
+
     } catch (error) {
         showToast(
             error.message,
             "error",
         );
+    }
+}
+
+async function pollScan(projectId, projectName) {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+        await new Promise((resolve) => {
+            window.setTimeout(resolve, 1500);
+        });
+
+        try {
+            const response = await apiFetch(
+                `/projects/${projectId}/status`
+            );
+            const data = await parseResponse(response);
+
+            if (!response.ok) {
+                return;
+            }
+
+            const scanStatus = data.latest_scan?.status;
+            if (scanStatus === "completed") {
+                await loadProjects();
+                showToast(
+                    `Security scan completed for ${projectName}.`,
+                    "success",
+                );
+                return;
+            }
+
+            if (scanStatus === "failed") {
+                await loadProjects();
+                showToast(
+                    `Security scan failed for ${projectName}.`,
+                    "error",
+                );
+                return;
+            }
+        } catch (error) {
+            return;
+        }
+    }
+}
+
+async function downloadReport(projectId, format) {
+    try {
+        const response = await apiFetch(
+            `/projects/${projectId}/report?format=${format}`
+        );
+        if (!response.ok) {
+            const data = await parseResponse(response);
+            throw new Error(
+                data.detail || "Unable to load the security report."
+            );
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        if (format === "html") {
+            window.open(url, "_blank", "noopener,noreferrer");
+            window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+            return;
+        }
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `api-sentry-project-${projectId}-report.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        showToast(error.message, "error");
     }
 }
 

@@ -1,5 +1,6 @@
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -7,6 +8,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -36,6 +38,7 @@ from app.services.project_service import (
     get_project_status,
     list_projects,
 )
+from app.services.scan_service import report_path, run_scan_job
 
 
 router = APIRouter(
@@ -231,6 +234,7 @@ def remove_project(
 )
 def start_project_scan(
     project_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         get_current_user
@@ -243,6 +247,12 @@ def start_project_scan(
             user_id=current_user.id,
         )
 
+        if enum_value(scan.status) == "queued":
+            background_tasks.add_task(
+                run_scan_job,
+                scan.id,
+            )
+
         return serialize_scan(scan)
 
     except ProjectNotFoundError as exc:
@@ -250,6 +260,67 @@ def start_project_scan(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+
+
+@router.get(
+    "/{project_id}/report",
+    response_class=FileResponse,
+)
+def get_project_report(
+    project_id: int,
+    format: str = "json",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        project, latest_scan = get_project_status(
+            db=db,
+            project_id=project_id,
+            user_id=current_user.id,
+        )
+    except ProjectNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    if latest_scan is None or enum_value(latest_scan.status) != "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A completed security report is not available.",
+        )
+
+    normalized_format = format.strip().lower()
+    if normalized_format not in {"json", "html"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Report format must be json or html.",
+        )
+
+    path = report_path(
+        project.id,
+        latest_scan.id,
+        normalized_format,
+    )
+    if not path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Security report file was not found.",
+        )
+
+    media_type = (
+        "application/json"
+        if normalized_format == "json"
+        else "text/html"
+    )
+    return FileResponse(
+        path,
+        media_type=media_type,
+        filename=(
+            f"api-sentry-{project.id}-scan-{latest_scan.id}."
+            f"{normalized_format}"
+        ),
+    )
 
 
 @router.get(

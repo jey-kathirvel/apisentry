@@ -219,18 +219,12 @@ class FastAPIAuthorizationSecurityAnalyzer(SourceAnalyzer):
     def supports(
         self,
         *,
-        language: str | None = None,
-        framework: str | None = None,
+        context: SourceAnalysisContext,
+        source_file: SourceFile | None = None,
     ) -> bool:
-        normalized_language = (language or "").strip().lower()
-        normalized_framework = (framework or "").strip().lower()
-
-        return (
-            not normalized_language
-            or normalized_language == "python"
-        ) and (
-            not normalized_framework
-            or normalized_framework == "fastapi"
+        return super().supports(
+            context=context,
+            source_file=source_file,
         )
 
     def analyze(
