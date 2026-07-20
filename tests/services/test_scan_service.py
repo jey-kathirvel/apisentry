@@ -101,6 +101,9 @@ def update_user(user_id: int):
 
         assert scan.status == ScanStatus.COMPLETED
         assert scan.progress == 100
+        assert scan.current_stage == "completed"
+        assert scan.status_message == "Security scan completed successfully."
+        assert scan.heartbeat_at is not None
         assert scan.started_at is not None
         assert scan.completed_at is not None
         assert project.status == ProjectStatus.COMPLETED

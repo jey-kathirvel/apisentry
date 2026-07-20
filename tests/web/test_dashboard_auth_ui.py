@@ -64,3 +64,12 @@ def test_application_root_redirects_to_dashboard() -> None:
 
     assert response.status_code == 307
     assert response.headers["location"] == "/dashboard"
+
+
+def test_scan_monitor_page_renders(client: TestClient) -> None:
+    response = client.get("/scan-monitor?project_id=1")
+
+    assert response.status_code == 200
+    assert 'id="monitorProgressBar"' in response.text
+    assert "Expected time remaining" in response.text
+    assert 'src="/static/js/scan-monitor.js"' in response.text

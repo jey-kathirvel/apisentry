@@ -1,0 +1,23 @@
+[Unit]
+Description=API Sentry Security Scan Worker
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/apisentry
+EnvironmentFile=/opt/apisentry/.env
+ExecStart=/opt/apisentry/venv/bin/python -m app.workers.scan_worker
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=apisentry-scan-worker
+
+[Install]
+WantedBy=multi-user.target

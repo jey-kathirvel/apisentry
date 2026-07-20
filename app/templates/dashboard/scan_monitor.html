@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="/static/css/scan-monitor.css">
+</head>
+<body>
+    <main class="scan-monitor" aria-live="polite">
+        <header class="monitor-header">
+            <div>
+                <p class="eyebrow">LIVE SECURITY SCAN</p>
+                <h1 id="monitorProjectName">Preparing scan…</h1>
+            </div>
+            <button id="monitorMinimizeButton" type="button" aria-label="Minimize scan details">−</button>
+        </header>
+
+        <section class="progress-summary">
+            <div class="progress-heading">
+                <strong id="monitorStage">Queued</strong>
+                <strong id="monitorPercentage">0%</strong>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+                <div id="monitorProgressBar" class="progress-bar"></div>
+            </div>
+            <p id="monitorMessage">Waiting for a scan worker.</p>
+        </section>
+
+        <section class="monitor-metrics">
+            <article>
+                <span>Expected time remaining</span>
+                <strong id="monitorEta">Calculating…</strong>
+            </article>
+            <article>
+                <span>Current status</span>
+                <strong id="monitorStatus">Queued</strong>
+            </article>
+        </section>
+
+        <ol id="monitorStages" class="stage-list">
+            <li data-stage="preparing"><span></span><div><strong>Prepare source</strong><small>Validate and stage the archive</small></div></li>
+            <li data-stage="inventory"><span></span><div><strong>Build inventory</strong><small>Index supported source files</small></div></li>
+            <li data-stage="discovery"><span></span><div><strong>Discover APIs</strong><small>Identify endpoints and parameters</small></div></li>
+            <li data-stage="analysis"><span></span><div><strong>Analyze security</strong><small>Run source and endpoint rules</small></div></li>
+            <li data-stage="reporting"><span></span><div><strong>Generate report</strong><small>Calculate score and remediation</small></div></li>
+        </ol>
+
+        <div id="monitorError" class="monitor-error hidden"></div>
+    </main>
+    <script src="/static/js/scan-monitor.js"></script>
+</body>
+</html>

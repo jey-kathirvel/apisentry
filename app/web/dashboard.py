@@ -30,6 +30,19 @@ def dashboard_page(
 
 
 @router.get(
+    "/scan-monitor",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def scan_monitor_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard/scan_monitor.html",
+        context={"page_title": "API Sentry Scan Progress"},
+    )
+
+
+@router.get(
     "/verify-email",
     response_class=HTMLResponse,
     include_in_schema=False,

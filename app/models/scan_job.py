@@ -6,6 +6,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Integer,
+    String,
     Text,
 )
 from sqlalchemy.orm import (
@@ -52,6 +53,39 @@ class ScanJob(Base):
     )
 
     progress: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    current_stage: Mapped[str] = mapped_column(
+        String(50),
+        default="queued",
+        nullable=False,
+    )
+
+    status_message: Mapped[str] = mapped_column(
+        String(500),
+        default="Waiting for a scan worker.",
+        nullable=False,
+    )
+
+    estimated_completion_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    worker_id: Mapped[str | None] = mapped_column(
+        String(150),
+        nullable=True,
+    )
+
+    attempts: Mapped[int] = mapped_column(
         Integer,
         default=0,
         nullable=False,

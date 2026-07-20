@@ -1,6 +1,7 @@
+from datetime import UTC, datetime
+
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -38,7 +39,7 @@ from app.services.project_service import (
     get_project_status,
     list_projects,
 )
-from app.services.scan_service import report_path, run_scan_job
+from app.services.scan_service import report_path
 
 
 router = APIRouter(
@@ -83,11 +84,25 @@ def serialize_upload(upload) -> ProjectUploadResponse:
 
 
 def serialize_scan(scan) -> ScanJobResponse:
+    seconds_remaining = None
+    if scan.estimated_completion_at is not None:
+        estimate = scan.estimated_completion_at
+        if estimate.tzinfo is None:
+            estimate = estimate.replace(tzinfo=UTC)
+        seconds_remaining = max(
+            0,
+            round((estimate - datetime.now(UTC)).total_seconds()),
+        )
+
     return ScanJobResponse(
         id=scan.id,
         project_id=scan.project_id,
         status=enum_value(scan.status),
         progress=scan.progress,
+        current_stage=scan.current_stage,
+        status_message=scan.status_message,
+        estimated_completion_at=scan.estimated_completion_at,
+        estimated_seconds_remaining=seconds_remaining,
         started_at=scan.started_at,
         completed_at=scan.completed_at,
         error_message=scan.error_message,
@@ -234,7 +249,6 @@ def remove_project(
 )
 def start_project_scan(
     project_id: int,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(
         get_current_user
@@ -246,12 +260,6 @@ def start_project_scan(
             project_id=project_id,
             user_id=current_user.id,
         )
-
-        if enum_value(scan.status) == "queued":
-            background_tasks.add_task(
-                run_scan_job,
-                scan.id,
-            )
 
         return serialize_scan(scan)
 

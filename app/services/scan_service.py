@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.session import SessionLocal
 from app.models.api_parameter import APIParameter, ParameterLocation
 from app.models.api_response import APIResponse
 from app.models.discovered_api import (
@@ -82,6 +81,37 @@ def _source_score(source_result) -> int:
         for issue in source_result.issues
     )
     return max(0, 100 - penalty)
+
+
+def _aware(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+
+
+def _update_progress(
+    db: Session,
+    scan: ScanJob,
+    *,
+    progress: int,
+    stage: str,
+    message: str,
+) -> None:
+    now = _utcnow()
+    scan.progress = max(0, min(100, progress))
+    scan.current_stage = stage
+    scan.status_message = message
+    scan.heartbeat_at = now
+
+    if scan.started_at is not None and 30 <= scan.progress < 100:
+        elapsed = max(
+            1,
+            (now - _aware(scan.started_at)).total_seconds(),
+        )
+        remaining = elapsed * (100 - scan.progress) / scan.progress
+        scan.estimated_completion_at = now + timedelta(
+            seconds=max(5, min(1800, remaining))
+        )
+
+    db.commit()
 
 
 def _persist_discovery(
@@ -204,11 +234,16 @@ def execute_scan(
 
     project_root = Path(upload.storage_path).resolve()
     scan.status = ScanStatus.RUNNING
-    scan.progress = 10
-    scan.started_at = _utcnow()
+    scan.started_at = scan.started_at or _utcnow()
     scan.error_message = None
     project.status = ProjectStatus.SCANNING
-    db.commit()
+    _update_progress(
+        db,
+        scan,
+        progress=10,
+        stage="preparing",
+        message="Preparing the uploaded source for analysis.",
+    )
 
     try:
         if not project_root.is_dir():
@@ -220,13 +255,26 @@ def execute_scan(
             for source in walk_result.source_files
             if source.language == "Python"
         ]
-        scan.progress = 30
-        db.commit()
+        _update_progress(
+            db,
+            scan,
+            progress=30,
+            stage="inventory",
+            message=(
+                f"Indexed {walk_result.total_files} files; "
+                "identifying API routes."
+            ),
+        )
 
         discovery = FastAPIASTDiscovery()
         endpoints = discovery.discover_directory(python_files)
-        scan.progress = 50
-        db.commit()
+        _update_progress(
+            db,
+            scan,
+            progress=50,
+            stage="discovery",
+            message=f"Discovered {len(endpoints)} API endpoints.",
+        )
 
         endpoint_result = SecurityAnalyzer().analyze_endpoints(endpoints)
         endpoint_result.project_id = project.id
@@ -244,8 +292,16 @@ def execute_scan(
                 language=project.detected_language,
             )
         )
-        scan.progress = 70
-        db.commit()
+        _update_progress(
+            db,
+            scan,
+            progress=70,
+            stage="analysis",
+            message=(
+                f"Analyzed {source_result.files_scanned} source files "
+                f"and found {source_result.issue_count} source issues."
+            ),
+        )
 
         _persist_discovery(
             db,
@@ -255,6 +311,13 @@ def execute_scan(
             project_root=project_root,
             framework=project.detected_framework,
             language=project.detected_language,
+        )
+        _update_progress(
+            db,
+            scan,
+            progress=85,
+            stage="reporting",
+            message="Calculating the score and generating reports.",
         )
 
         source_score = _source_score(source_result)
@@ -291,29 +354,29 @@ def execute_scan(
         project.security_score = overall_score
         project.status = ProjectStatus.COMPLETED
         scan.status = ScanStatus.COMPLETED
-        scan.progress = 100
         scan.completed_at = _utcnow()
-        db.commit()
+        scan.estimated_completion_at = scan.completed_at
+        _update_progress(
+            db,
+            scan,
+            progress=100,
+            stage="completed",
+            message="Security scan completed successfully.",
+        )
     except Exception:
         db.rollback()
         failed_scan = db.get(ScanJob, scan_job_id)
         if failed_scan is not None:
             failed_scan.status = ScanStatus.FAILED
-            failed_scan.progress = 100
+            failed_scan.progress = min(failed_scan.progress, 99)
+            failed_scan.current_stage = "failed"
+            failed_scan.status_message = "The scan stopped before completion."
             failed_scan.completed_at = _utcnow()
+            failed_scan.heartbeat_at = failed_scan.completed_at
+            failed_scan.estimated_completion_at = None
             failed_scan.error_message = "Security scan failed."
             failed_project = db.get(Project, failed_scan.project_id)
             if failed_project is not None:
                 failed_project.status = ProjectStatus.FAILED
             db.commit()
         raise
-
-
-def run_scan_job(scan_job_id: int) -> None:
-    with SessionLocal() as db:
-        try:
-            execute_scan(db, scan_job_id)
-        except Exception:
-            # State is recorded by execute_scan; background tasks must not
-            # surface internal project details through the HTTP response.
-            return

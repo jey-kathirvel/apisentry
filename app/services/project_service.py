@@ -1,4 +1,6 @@
 import shutil
+from datetime import UTC, datetime, timedelta
+from math import ceil
 from pathlib import Path
 
 from fastapi import UploadFile
@@ -288,6 +290,14 @@ def create_scan_job(
         project_id=project.id,
         status=ScanStatus.QUEUED,
         progress=0,
+        current_stage="queued",
+        status_message="Waiting for a scan worker.",
+        estimated_completion_at=(
+            datetime.now(UTC)
+            + timedelta(
+                seconds=_estimate_scan_seconds(db, project.id),
+            )
+        ),
     )
 
     project.status = ProjectStatus.SCANNING
@@ -297,6 +307,21 @@ def create_scan_job(
     db.refresh(scan_job)
 
     return scan_job
+
+
+def _estimate_scan_seconds(db: Session, project_id: int) -> int:
+    upload = db.scalar(
+        select(ProjectUpload)
+        .where(ProjectUpload.project_id == project_id)
+        .order_by(desc(ProjectUpload.uploaded_at))
+        .limit(1)
+    )
+    size_mb = (
+        upload.file_size / (1024 * 1024)
+        if upload is not None
+        else 0
+    )
+    return max(30, min(1800, 30 + ceil(size_mb * 2)))
 
 
 def get_project_status(

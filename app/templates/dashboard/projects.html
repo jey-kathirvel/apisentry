@@ -519,6 +519,34 @@
 
 </div>
 
+<section
+    id="scanMonitorPanel"
+    class="scan-monitor-panel hidden"
+    aria-label="Live scan progress"
+>
+    <button
+        id="restoreScanMonitorButton"
+        class="scan-monitor-restore hidden"
+        type="button"
+    >
+        <span class="scan-pulse"></span>
+        <span id="minimizedScanLabel">Security scan running</span>
+        <strong id="minimizedScanProgress">0%</strong>
+    </button>
+
+    <div id="scanMonitorFrameShell" class="scan-monitor-frame-shell">
+        <div class="scan-monitor-toolbar">
+            <strong>Live Scan Details</strong>
+            <button id="minimizeScanMonitorButton" type="button" aria-label="Minimize scan details">−</button>
+        </div>
+        <iframe
+            id="scanMonitorFrame"
+            title="Live security scan details"
+            sandbox="allow-scripts allow-same-origin"
+        ></iframe>
+    </div>
+</section>
+
 <div
     id="uploadModal"
     class="modal hidden"

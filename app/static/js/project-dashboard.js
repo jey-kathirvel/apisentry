@@ -134,6 +134,13 @@ const elements = {
     projectsGrid: document.getElementById(
         "projectsGrid"
     ),
+    scanMonitorPanel: document.getElementById("scanMonitorPanel"),
+    scanMonitorFrameShell: document.getElementById("scanMonitorFrameShell"),
+    scanMonitorFrame: document.getElementById("scanMonitorFrame"),
+    minimizeScanMonitorButton: document.getElementById("minimizeScanMonitorButton"),
+    restoreScanMonitorButton: document.getElementById("restoreScanMonitorButton"),
+    minimizedScanLabel: document.getElementById("minimizedScanLabel"),
+    minimizedScanProgress: document.getElementById("minimizedScanProgress"),
     projectSearchInput: document.getElementById(
         "projectSearchInput"
     ),
@@ -707,6 +714,16 @@ function renderProjects(projects) {
                             </button>
                         ` : ""}
 
+                        ${status === "scanning" ? `
+                            <button
+                                class="button button-secondary scan-progress-button"
+                                type="button"
+                                data-project-id="${project.id}"
+                            >
+                                View Progress
+                            </button>
+                        ` : ""}
+
                     </div>
 
                 </article>
@@ -760,6 +777,17 @@ function bindProjectActions() {
                     );
                 },
             );
+        });
+
+    document
+        .querySelectorAll(".scan-progress-button")
+        .forEach((button) => {
+            button.addEventListener("click", () => {
+                const project = state.projects.find(
+                    (item) => item.id === Number(button.dataset.projectId)
+                );
+                if (project) openScanMonitor(project.id, project.name);
+            });
         });
 }
 
@@ -1388,6 +1416,7 @@ async function startScan(projectId) {
             "success",
         );
 
+        openScanMonitor(projectId, project.name);
         pollScan(projectId, project.name);
 
     } catch (error) {
@@ -1396,6 +1425,28 @@ async function startScan(projectId) {
             "error",
         );
     }
+}
+
+function openScanMonitor(projectId, projectName) {
+    const query = new URLSearchParams({
+        project_id: String(projectId),
+        project_name: projectName,
+    });
+    elements.scanMonitorFrame.src = `/scan-monitor?${query.toString()}`;
+    elements.minimizedScanLabel.textContent = `${projectName} scan`;
+    elements.scanMonitorPanel.classList.remove("hidden");
+    elements.scanMonitorFrameShell.classList.remove("hidden");
+    elements.restoreScanMonitorButton.classList.add("hidden");
+}
+
+function minimizeScanMonitor() {
+    elements.scanMonitorFrameShell.classList.add("hidden");
+    elements.restoreScanMonitorButton.classList.remove("hidden");
+}
+
+function restoreScanMonitor() {
+    elements.scanMonitorFrameShell.classList.remove("hidden");
+    elements.restoreScanMonitorButton.classList.add("hidden");
 }
 
 async function pollScan(projectId, projectName) {
@@ -1667,6 +1718,31 @@ function bindEvents() {
         "click",
         loadProjects,
     );
+
+    elements.minimizeScanMonitorButton.addEventListener(
+        "click",
+        minimizeScanMonitor,
+    );
+
+    elements.restoreScanMonitorButton.addEventListener(
+        "click",
+        restoreScanMonitor,
+    );
+
+    window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type === "apisentry:minimize-scan-monitor") {
+            minimizeScanMonitor();
+            return;
+        }
+        if (event.data?.type !== "apisentry:scan-status") return;
+
+        elements.minimizedScanProgress.textContent =
+            `${Number(event.data.progress || 0)}%`;
+        if (["completed", "failed"].includes(event.data.status)) {
+            loadProjects();
+        }
+    });
 
     elements.projectSearchInput.addEventListener(
         "input",

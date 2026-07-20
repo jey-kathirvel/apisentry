@@ -46,6 +46,10 @@ class ScanJobResponse(BaseModel):
     project_id: int
     status: str
     progress: int
+    current_stage: str
+    status_message: str
+    estimated_completion_at: datetime | None = None
+    estimated_seconds_remaining: int | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
     error_message: str | None = None
