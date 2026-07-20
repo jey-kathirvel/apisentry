@@ -2311,6 +2311,253 @@ async function logout() {
     );
 }
 
+
+/*
+=====================================================
+ UI-004 PATCH-002
+ Mobile Navigation Controller
+=====================================================
+*/
+
+function initializeMobileNavigation() {
+    const mobileBreakpoint = 820;
+
+    if (
+        !elements.sidebar
+        || !elements.mobileMenuButton
+        || !elements.dashboardView
+    ) {
+        return;
+    }
+
+    let backdrop = document.getElementById(
+        "mobileSidebarBackdrop"
+    );
+
+    if (!backdrop) {
+        backdrop = document.createElement("button");
+
+        backdrop.id = "mobileSidebarBackdrop";
+        backdrop.className = "mobile-sidebar-backdrop";
+        backdrop.type = "button";
+
+        backdrop.setAttribute(
+            "aria-label",
+            "Close navigation menu",
+        );
+
+        elements.dashboardView.insertBefore(
+            backdrop,
+            elements.dashboardView.firstChild,
+        );
+    }
+
+    if (!document.getElementById("mobileNavigationStyles")) {
+        const style = document.createElement("style");
+
+        style.id = "mobileNavigationStyles";
+
+        style.textContent = `
+            .mobile-sidebar-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 890;
+
+                margin: 0;
+                padding: 0;
+
+                border: 0;
+
+                background:
+                    rgba(17, 13, 7, 0.54);
+
+                -webkit-backdrop-filter:
+                    blur(3px);
+
+                backdrop-filter:
+                    blur(3px);
+
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+
+                transition:
+                    opacity 180ms ease,
+                    visibility 180ms ease;
+            }
+
+            .mobile-sidebar-backdrop.open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+            @media (max-width: ${mobileBreakpoint}px) {
+                .sidebar {
+                    z-index: 900 !important;
+
+                    transition:
+                        transform 220ms ease !important;
+                }
+
+                body.mobile-menu-open {
+                    overflow: hidden;
+                    touch-action: none;
+                }
+            }
+
+            @media (min-width: ${mobileBreakpoint + 1}px) {
+                .mobile-sidebar-backdrop {
+                    display: none !important;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .mobile-sidebar-backdrop,
+                .sidebar {
+                    transition: none !important;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    const isMobile = () => (
+        window.innerWidth <= mobileBreakpoint
+    );
+
+    const setMobileMenuState = (
+        open,
+        returnFocus = false,
+    ) => {
+        const shouldOpen = Boolean(
+            open && isMobile()
+        );
+
+        elements.sidebar.classList.toggle(
+            "open",
+            shouldOpen,
+        );
+
+        backdrop.classList.toggle(
+            "open",
+            shouldOpen,
+        );
+
+        document.body.classList.toggle(
+            "mobile-menu-open",
+            shouldOpen,
+        );
+
+        elements.mobileMenuButton.setAttribute(
+            "aria-expanded",
+            String(shouldOpen),
+        );
+
+        elements.mobileMenuButton.setAttribute(
+            "aria-label",
+            shouldOpen
+                ? "Close menu"
+                : "Open menu",
+        );
+
+        if (returnFocus) {
+            elements.mobileMenuButton.focus({
+                preventScroll: true,
+            });
+        }
+    };
+
+    const closeMobileMenu = (
+        returnFocus = false,
+    ) => {
+        setMobileMenuState(
+            false,
+            returnFocus,
+        );
+    };
+
+    elements.mobileMenuButton.setAttribute(
+        "aria-controls",
+        "sidebar",
+    );
+
+    elements.mobileMenuButton.setAttribute(
+        "aria-expanded",
+        "false",
+    );
+
+    elements.mobileMenuButton.addEventListener(
+        "click",
+        () => {
+            setMobileMenuState(
+                !elements.sidebar.classList.contains(
+                    "open"
+                ),
+            );
+        },
+    );
+
+    backdrop.addEventListener(
+        "click",
+        () => {
+            closeMobileMenu(true);
+        },
+    );
+
+    elements.sidebar.addEventListener(
+        "click",
+        (event) => {
+            const navigationTarget =
+                event.target.closest(
+                    ".sidebar-nav a, "
+                    + ".sidebar-nav button"
+                );
+
+            if (
+                navigationTarget
+                && isMobile()
+            ) {
+                closeMobileMenu();
+            }
+        },
+    );
+
+    document.addEventListener(
+        "keydown",
+        (event) => {
+            if (
+                event.key === "Escape"
+                && isMobile()
+                && elements.sidebar.classList
+                    .contains("open")
+            ) {
+                closeMobileMenu(true);
+            }
+        },
+    );
+
+    window.addEventListener(
+        "hashchange",
+        () => {
+            if (isMobile()) {
+                closeMobileMenu();
+            }
+        },
+    );
+
+    window.addEventListener(
+        "resize",
+        () => {
+            if (!isMobile()) {
+                closeMobileMenu();
+            }
+        },
+    );
+}
+
+
 function bindEvents() {
     elements.loginForm.addEventListener(
         "submit",
@@ -2440,14 +2687,7 @@ function bindEvents() {
         },
     );
 
-    elements.mobileMenuButton.addEventListener(
-        "click",
-        () => {
-            elements.sidebar.classList.toggle(
-                "open"
-            );
-        },
-    );
+    initializeMobileNavigation();
 
     elements.dropZone.addEventListener(
         "dragover",
