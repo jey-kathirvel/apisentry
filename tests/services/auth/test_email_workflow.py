@@ -233,3 +233,36 @@ def test_empty_token_rejected(
         )
 
     assert provider.messages == []
+
+
+def test_sends_project_and_scan_lifecycle_emails(
+    workflow: AuthEmailWorkflow,
+    provider: CapturingProvider,
+) -> None:
+    workflow.send_project_uploaded_email(
+        recipient="jey@example.com",
+        full_name="Jey Kathirvel",
+        project_name="Payments API",
+        project_url="https://apisentry.ads-ai.in/dashboard?project_id=12",
+        framework="FastAPI",
+        language="Python",
+    )
+    workflow.send_scan_completed_email(
+        recipient="jey@example.com",
+        full_name="Jey Kathirvel",
+        project_name="Payments API",
+        report_url="https://apisentry.ads-ai.in/dashboard?report_project_id=12",
+        security_score=82,
+        severity_counts={"critical": 1, "high": 2, "medium": 3, "low": 4},
+    )
+    workflow.send_scan_failed_email(
+        recipient="jey@example.com",
+        full_name="Jey Kathirvel",
+        project_name="Payments API",
+        dashboard_url="https://apisentry.ads-ai.in/dashboard",
+    )
+
+    assert len(provider.messages) == 3
+    assert "Payments API" in (provider.messages[0].text_body or "")
+    assert "Security score: 82" in (provider.messages[1].text_body or "")
+    assert "stopped before completion" in (provider.messages[2].text_body or "")

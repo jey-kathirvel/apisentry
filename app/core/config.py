@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     password_reset_expire_minutes: int = 30
 
     max_project_upload_mb: int = 200
+    scan_timeout_minutes: int = 30
 
     project_storage_path: Path = Path(
         "/opt/apisentry/storage/projects"

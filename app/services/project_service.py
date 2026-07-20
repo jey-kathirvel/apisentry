@@ -25,6 +25,7 @@ from app.services.archive_service import (
 from app.services.technology_detector import (
     detect_project_technology,
 )
+from app.core.config import settings
 
 
 class ProjectServiceError(Exception):
@@ -298,6 +299,10 @@ def create_scan_job(
                 seconds=_estimate_scan_seconds(db, project.id),
             )
         ),
+        deadline_at=(
+            datetime.now(UTC)
+            + timedelta(minutes=settings.scan_timeout_minutes)
+        ),
     )
 
     project.status = ProjectStatus.SCANNING
@@ -387,3 +392,34 @@ def get_owned_scan(
     if scan is None:
         raise ProjectNotFoundError("Scan not found.")
     return project, scan
+
+
+def request_scan_cancellation(
+    db: Session,
+    project_id: int,
+    scan_id: int,
+    user_id: int,
+) -> ScanJob:
+    project, scan = get_owned_scan(
+        db=db,
+        project_id=project_id,
+        scan_id=scan_id,
+        user_id=user_id,
+    )
+    if scan.status not in {ScanStatus.QUEUED, ScanStatus.RUNNING}:
+        raise ProjectServiceError("Only an active scan can be cancelled.")
+
+    now = datetime.now(UTC)
+    scan.cancel_requested_at = now
+    scan.status_message = "Cancellation requested; stopping safely."
+    if scan.status == ScanStatus.QUEUED:
+        scan.status = ScanStatus.CANCELLED
+        scan.current_stage = "cancelled"
+        scan.completed_at = now
+        scan.estimated_completion_at = None
+        project.status = ProjectStatus.READY
+    else:
+        scan.current_stage = "cancelling"
+    db.commit()
+    db.refresh(scan)
+    return scan

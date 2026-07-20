@@ -1,0 +1,8 @@
+Hello {{ full_name }},
+
+The security scan for "{{ project_name }}" stopped before completion.
+
+Your uploaded project is still available. Open API Sentry to review the status and start another scan:
+{{ dashboard_url }}
+
+{{ app_name }}

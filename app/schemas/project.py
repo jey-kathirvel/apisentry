@@ -50,6 +50,8 @@ class ScanJobResponse(BaseModel):
     status_message: str
     estimated_completion_at: datetime | None = None
     estimated_seconds_remaining: int | None = None
+    deadline_at: datetime | None = None
+    cancel_requested_at: datetime | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
     error_message: str | None = None

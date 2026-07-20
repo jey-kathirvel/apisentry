@@ -2,6 +2,7 @@
 
 const projectId = Number(new URLSearchParams(window.location.search).get("project_id"));
 const stageOrder = ["preparing", "inventory", "discovery", "analysis", "reporting"];
+let latestScanId = null;
 const elements = {
     projectName: document.getElementById("monitorProjectName"),
     stage: document.getElementById("monitorStage"),
@@ -13,6 +14,7 @@ const elements = {
     error: document.getElementById("monitorError"),
     stages: document.querySelectorAll("[data-stage]"),
     minimizeButton: document.getElementById("monitorMinimizeButton"),
+    cancelButton: document.getElementById("monitorCancelButton"),
 };
 
 function formatEta(seconds) {
@@ -29,6 +31,7 @@ function formatEta(seconds) {
 function render(data) {
     const scan = data.latest_scan;
     if (!scan) return;
+    latestScanId = scan.id;
     const progress = Math.max(0, Math.min(100, Number(scan.progress || 0)));
     elements.stage.textContent = String(scan.current_stage || scan.status);
     elements.percentage.textContent = `${progress}%`;
@@ -40,6 +43,10 @@ function render(data) {
             ? "Unavailable"
             : formatEta(scan.estimated_seconds_remaining);
     elements.status.textContent = scan.status;
+    elements.cancelButton.classList.toggle(
+        "hidden",
+        !["queued", "running"].includes(scan.status),
+    );
 
     const activeIndex = stageOrder.indexOf(scan.current_stage);
     elements.stages.forEach((item, index) => {
@@ -70,7 +77,7 @@ async function refresh() {
         if (!response.ok) throw new Error("Scan progress is unavailable.");
         const data = await response.json();
         render(data);
-        return !["completed", "failed"].includes(data.latest_scan?.status);
+        return !["completed", "failed", "cancelled"].includes(data.latest_scan?.status);
     } catch (error) {
         elements.error.textContent = error.message;
         elements.error.classList.remove("hidden");
@@ -80,6 +87,24 @@ async function refresh() {
 
 elements.minimizeButton.addEventListener("click", () => {
     window.parent.postMessage({type: "apisentry:minimize-scan-monitor"}, window.location.origin);
+});
+
+elements.cancelButton.addEventListener("click", async () => {
+    if (!latestScanId || !window.confirm("Cancel this security scan?")) return;
+    elements.cancelButton.disabled = true;
+    try {
+        const token = localStorage.getItem("apisentry_access_token");
+        const response = await fetch(
+            `/api/v1/projects/${projectId}/scans/${latestScanId}/cancel`,
+            {method: "POST", headers: {Authorization: `Bearer ${token}`}},
+        );
+        if (!response.ok) throw new Error("Unable to cancel the scan.");
+        elements.message.textContent = "Cancellation requested; stopping safely.";
+    } catch (error) {
+        elements.error.textContent = error.message;
+        elements.error.classList.remove("hidden");
+        elements.cancelButton.disabled = false;
+    }
 });
 
 elements.projectName.textContent = new URLSearchParams(window.location.search).get("project_name") || `Project #${projectId}`;

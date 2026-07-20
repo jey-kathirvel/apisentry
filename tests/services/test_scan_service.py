@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -18,7 +19,12 @@ from app.services.scan_service import execute_scan, report_path
 
 def test_execute_scan_discovers_analyzes_and_persists_report(
     tmp_path: Path,
+    monkeypatch,
 ) -> None:
+    monkeypatch.setattr(
+        "app.services.scan_service.notify_scan_completed",
+        lambda **kwargs: None,
+    )
     source_root = tmp_path / "source"
     source_root.mkdir()
     (source_root / "main.py").write_text(
@@ -135,7 +141,14 @@ def update_user(user_id: int):
         assert "source_analysis" in payload
 
 
-def test_execute_scan_marks_missing_source_as_failed(tmp_path: Path) -> None:
+def test_execute_scan_marks_missing_source_as_failed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.services.scan_service.notify_scan_failed",
+        lambda **kwargs: None,
+    )
     engine = create_engine(
         f"sqlite+pysqlite:///{tmp_path / 'failed.db'}"
     )
@@ -188,3 +201,54 @@ def test_execute_scan_marks_missing_source_as_failed(tmp_path: Path) -> None:
         assert scan.status == ScanStatus.FAILED
         assert project.status == ProjectStatus.FAILED
         assert scan.error_message == "Security scan failed."
+
+
+def test_execute_scan_honors_cancellation_before_analysis(
+    tmp_path: Path,
+) -> None:
+    source_root = tmp_path / "cancel-source"
+    source_root.mkdir()
+    (source_root / "main.py").write_text("from fastapi import FastAPI\n", encoding="utf-8")
+    engine = create_engine(f"sqlite+pysqlite:///{tmp_path / 'cancel-scan.db'}")
+    Base.metadata.create_all(engine)
+    with Session(engine, expire_on_commit=False) as db:
+        user = User(
+            full_name="Cancel Owner",
+            email="cancel-scan@example.com",
+            password_hash="hashed",
+            status=UserStatus.ACTIVE,
+            is_email_verified=True,
+        )
+        db.add(user)
+        db.flush()
+        project = Project(
+            user_id=user.id,
+            name="Cancelled API",
+            status=ProjectStatus.SCANNING,
+            api_count=0,
+            security_score=0,
+        )
+        db.add(project)
+        db.flush()
+        db.add(ProjectUpload(
+            project_id=project.id,
+            original_filename="cancel.zip",
+            stored_filename="cancel.zip",
+            storage_path=str(source_root),
+            sha256_checksum="c" * 64,
+            file_size=10,
+        ))
+        scan = ScanJob(
+            project_id=project.id,
+            status=ScanStatus.RUNNING,
+            cancel_requested_at=datetime.now(UTC),
+            deadline_at=datetime.now(UTC) + timedelta(minutes=5),
+        )
+        db.add(scan)
+        db.commit()
+
+        execute_scan(db, scan.id, report_root=tmp_path / "reports")
+
+        assert scan.status == ScanStatus.CANCELLED
+        assert scan.current_stage == "cancelled"
+        assert project.status == ProjectStatus.READY

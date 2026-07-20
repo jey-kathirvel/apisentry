@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Security scan needs attention</h1>
+<p>Hello {{ full_name }},</p>
+<p>The security scan for <strong>{{ project_name }}</strong> stopped before completion.</p>
+<p>Your uploaded project is still available. You can review its status and start another scan.</p>
+<p><a class="button" href="{{ dashboard_url }}">Open API Sentry</a></p>
+{% endblock %}

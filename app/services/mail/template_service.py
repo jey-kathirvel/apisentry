@@ -149,3 +149,26 @@ class EmailTemplateService:
             text_body=rendered.text_body,
             html_body=rendered.html_body,
         )
+
+    def scan_failed_email(
+        self,
+        *,
+        recipient: str,
+        full_name: str,
+        project_name: str,
+        dashboard_url: str,
+    ) -> EmailMessage:
+        rendered = self.renderer.render(
+            template_name="scan_failed",
+            context={
+                "full_name": full_name,
+                "project_name": project_name,
+                "dashboard_url": dashboard_url,
+            },
+        )
+        return EmailMessage(
+            subject=rendered.subject,
+            recipients=(recipient,),
+            text_body=rendered.text_body,
+            html_body=rendered.html_body,
+        )

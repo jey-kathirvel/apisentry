@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.project import Project, ProjectStatus
 from app.models.scan_job import ScanJob, ScanStatus
+from app.models.user import User
+from app.services.project_notification_service import notify_scan_failed
 from app.services.scan_service import execute_scan
 
 
@@ -46,6 +48,7 @@ def recover_stale_scans(
             )
         )
     )
+    failed_projects: list[Project] = []
 
     for scan in scans:
         project = db.get(Project, scan.project_id)
@@ -58,6 +61,7 @@ def recover_stale_scans(
             scan.estimated_completion_at = None
             if project is not None:
                 project.status = ProjectStatus.FAILED
+                failed_projects.append(project)
             continue
 
         scan.status = ScanStatus.QUEUED
@@ -70,6 +74,14 @@ def recover_stale_scans(
 
     if scans:
         db.commit()
+    for project in failed_projects:
+        user = db.get(User, project.user_id)
+        if user is not None:
+            notify_scan_failed(
+                recipient=user.email,
+                full_name=user.full_name,
+                project_name=project.name,
+            )
     return len(scans)
 
 

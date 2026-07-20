@@ -18,6 +18,7 @@ from app.models.discovered_api import (
 from app.models.project import Project, ProjectStatus
 from app.models.project_upload import ProjectUpload
 from app.models.scan_job import ScanJob, ScanStatus
+from app.models.user import User
 from app.services.discovery.models import EndpointDiscovery
 from app.services.fastapi_ast_discovery import FastAPIASTDiscovery
 from app.services.security.analyzer import SecurityAnalyzer
@@ -30,6 +31,10 @@ from app.services.security.source_analysis import (
     registry,
 )
 from app.services.source_code_walker import SourceCodeWalker
+from app.services.project_notification_service import (
+    notify_scan_completed,
+    notify_scan_failed,
+)
 
 
 SOURCE_SEVERITY_WEIGHTS = {
@@ -42,6 +47,14 @@ SOURCE_SEVERITY_WEIGHTS = {
 
 
 class ScanExecutionError(RuntimeError):
+    pass
+
+
+class ScanCancelledError(ScanExecutionError):
+    pass
+
+
+class ScanTimeoutError(ScanExecutionError):
     pass
 
 
@@ -104,7 +117,10 @@ def _update_progress(
     progress: int,
     stage: str,
     message: str,
+    check_control: bool = True,
 ) -> None:
+    if check_control:
+        _check_scan_control(db, scan)
     now = _utcnow()
     scan.progress = max(0, min(100, progress))
     scan.current_stage = stage
@@ -122,6 +138,27 @@ def _update_progress(
         )
 
     db.commit()
+
+
+def _check_scan_control(db: Session, scan: ScanJob) -> None:
+    db.refresh(scan)
+    if scan.cancel_requested_at is not None:
+        raise ScanCancelledError("Scan cancellation was requested.")
+    if (
+        scan.deadline_at is not None
+        and _utcnow() >= _aware(scan.deadline_at)
+    ):
+        raise ScanTimeoutError("Scan deadline was exceeded.")
+
+
+def _notify_failed_scan(db: Session, project: Project) -> None:
+    user = db.get(User, project.user_id)
+    if user is not None:
+        notify_scan_failed(
+            recipient=user.email,
+            full_name=user.full_name,
+            project_name=project.name,
+        )
 
 
 def _persist_discovery(
@@ -247,15 +284,16 @@ def execute_scan(
     scan.started_at = scan.started_at or _utcnow()
     scan.error_message = None
     project.status = ProjectStatus.SCANNING
-    _update_progress(
-        db,
-        scan,
-        progress=10,
-        stage="preparing",
-        message="Preparing the uploaded source for analysis.",
-    )
+    db.commit()
 
     try:
+        _update_progress(
+            db,
+            scan,
+            progress=10,
+            stage="preparing",
+            message="Preparing the uploaded source for analysis.",
+        )
         if not project_root.is_dir():
             raise ScanExecutionError("Uploaded project source is unavailable.")
 
@@ -352,6 +390,11 @@ def execute_scan(
         report["summary"]["severity"] = severity_from_score(
             overall_score
         ).value
+        severity_counts = endpoint_result.severity_counts()
+        for issue in source_result.issues:
+            severity = issue.severity.value
+            severity_counts[severity] = severity_counts.get(severity, 0) + 1
+        report["summary"]["severity_counts"] = severity_counts
 
         json_path = report_path(project.id, scan.id, "json", report_root)
         json_path.write_text(
@@ -375,7 +418,50 @@ def execute_scan(
             progress=100,
             stage="completed",
             message="Security scan completed successfully.",
+            check_control=False,
         )
+        user = db.get(User, project.user_id)
+        if user is not None:
+            notify_scan_completed(
+                recipient=user.email,
+                full_name=user.full_name,
+                project_id=project.id,
+                project_name=project.name,
+                security_score=overall_score,
+                severity_counts=severity_counts,
+            )
+    except ScanCancelledError:
+        db.rollback()
+        cancelled_scan = db.get(ScanJob, scan_job_id)
+        if cancelled_scan is not None:
+            cancelled_scan.status = ScanStatus.CANCELLED
+            cancelled_scan.current_stage = "cancelled"
+            cancelled_scan.status_message = "Security scan cancelled."
+            cancelled_scan.completed_at = _utcnow()
+            cancelled_scan.heartbeat_at = cancelled_scan.completed_at
+            cancelled_scan.estimated_completion_at = None
+            cancelled_project = db.get(Project, cancelled_scan.project_id)
+            if cancelled_project is not None:
+                cancelled_project.status = ProjectStatus.READY
+            db.commit()
+    except ScanTimeoutError:
+        db.rollback()
+        timed_out_scan = db.get(ScanJob, scan_job_id)
+        if timed_out_scan is not None:
+            timed_out_scan.status = ScanStatus.FAILED
+            timed_out_scan.current_stage = "timed_out"
+            timed_out_scan.status_message = "Security scan exceeded its time limit."
+            timed_out_scan.completed_at = _utcnow()
+            timed_out_scan.heartbeat_at = timed_out_scan.completed_at
+            timed_out_scan.estimated_completion_at = None
+            timed_out_scan.error_message = "Security scan timed out."
+            timed_out_project = db.get(Project, timed_out_scan.project_id)
+            if timed_out_project is not None:
+                timed_out_project.status = ProjectStatus.FAILED
+                db.commit()
+                _notify_failed_scan(db, timed_out_project)
+            else:
+                db.commit()
     except Exception:
         db.rollback()
         failed_scan = db.get(ScanJob, scan_job_id)
@@ -392,4 +478,6 @@ def execute_scan(
             if failed_project is not None:
                 failed_project.status = ProjectStatus.FAILED
             db.commit()
+            if failed_project is not None:
+                _notify_failed_scan(db, failed_project)
         raise

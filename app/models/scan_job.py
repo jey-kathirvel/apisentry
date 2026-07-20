@@ -22,6 +22,7 @@ class ScanStatus(str, enum.Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class ScanJob(Base):
@@ -89,6 +90,16 @@ class ScanJob(Base):
         Integer,
         default=0,
         nullable=False,
+    )
+
+    deadline_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    cancel_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     started_at: Mapped[datetime | None] = mapped_column(

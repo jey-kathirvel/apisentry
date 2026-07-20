@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -40,9 +41,11 @@ from app.services.project_service import (
     get_project_status,
     get_owned_scan,
     list_project_scans,
+    request_scan_cancellation,
     list_projects,
 )
 from app.services.scan_service import report_path
+from app.services.project_notification_service import notify_project_uploaded
 
 
 router = APIRouter(
@@ -106,6 +109,8 @@ def serialize_scan(scan, *, report_available: bool = False) -> ScanJobResponse:
         status_message=scan.status_message,
         estimated_completion_at=scan.estimated_completion_at,
         estimated_seconds_remaining=seconds_remaining,
+        deadline_at=scan.deadline_at,
+        cancel_requested_at=scan.cancel_requested_at,
         started_at=scan.started_at,
         completed_at=scan.completed_at,
         error_message=scan.error_message,
@@ -120,6 +125,7 @@ def serialize_scan(scan, *, report_available: bool = False) -> ScanJobResponse:
     status_code=status.HTTP_201_CREATED,
 )
 def upload_project(
+    background_tasks: BackgroundTasks,
     name: str = Form(...),
     description: str | None = Form(None),
     file: UploadFile = File(...),
@@ -135,6 +141,16 @@ def upload_project(
             name=name,
             description=description,
             upload=file,
+        )
+
+        background_tasks.add_task(
+            notify_project_uploaded,
+            recipient=current_user.email,
+            full_name=current_user.full_name,
+            project_id=project.id,
+            project_name=project.name,
+            framework=project.detected_framework,
+            language=project.detected_language,
         )
 
         return serialize_project(project)
@@ -310,6 +326,36 @@ def get_project_scan_history(
         for scan in scans
     ]
     return ScanHistoryResponse(scans=serialized, total=len(serialized))
+
+
+@router.post(
+    "/{project_id}/scans/{scan_id}/cancel",
+    response_model=ScanJobResponse,
+)
+def cancel_project_scan(
+    project_id: int,
+    scan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        scan = request_scan_cancellation(
+            db=db,
+            project_id=project_id,
+            scan_id=scan_id,
+            user_id=current_user.id,
+        )
+        return serialize_scan(scan)
+    except ProjectNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ProjectServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(

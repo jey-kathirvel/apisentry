@@ -164,6 +164,65 @@ class AuthEmailWorkflow:
 
         return self.delivery_service.send(message)
 
+    def send_project_uploaded_email(
+        self,
+        *,
+        recipient: str,
+        full_name: str,
+        project_name: str,
+        project_url: str,
+        framework: str | None = None,
+        language: str | None = None,
+    ) -> EmailResult:
+        message = self.template_service.project_uploaded_email(
+            recipient=recipient,
+            full_name=self._display_name(full_name, recipient),
+            project_name=project_name,
+            project_url=project_url,
+            framework=framework,
+            language=language,
+        )
+        return self.delivery_service.send(message)
+
+    def send_scan_completed_email(
+        self,
+        *,
+        recipient: str,
+        full_name: str,
+        project_name: str,
+        report_url: str,
+        security_score: int,
+        severity_counts: dict[str, int],
+    ) -> EmailResult:
+        message = self.template_service.scan_completed_email(
+            recipient=recipient,
+            full_name=self._display_name(full_name, recipient),
+            project_name=project_name,
+            report_url=report_url,
+            security_score=security_score,
+            critical_count=severity_counts.get("critical", 0),
+            high_count=severity_counts.get("high", 0),
+            medium_count=severity_counts.get("medium", 0),
+            low_count=severity_counts.get("low", 0),
+        )
+        return self.delivery_service.send(message)
+
+    def send_scan_failed_email(
+        self,
+        *,
+        recipient: str,
+        full_name: str,
+        project_name: str,
+        dashboard_url: str,
+    ) -> EmailResult:
+        message = self.template_service.scan_failed_email(
+            recipient=recipient,
+            full_name=self._display_name(full_name, recipient),
+            project_name=project_name,
+            dashboard_url=dashboard_url,
+        )
+        return self.delivery_service.send(message)
+
     @staticmethod
     def _validate_token(
         token: str,

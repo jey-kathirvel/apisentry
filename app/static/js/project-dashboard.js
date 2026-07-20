@@ -942,6 +942,7 @@ async function handleLogin(event) {
 
         showDashboardView();
         await loadProjects();
+        openRequestedReport();
 
         elements.loginForm.reset();
 
@@ -1477,6 +1478,16 @@ function closeReportViewer() {
     document.body.style.overflow = "";
 }
 
+function openRequestedReport() {
+    const query = new URLSearchParams(window.location.search);
+    const projectId = Number(query.get("report_project_id"));
+    if (!projectId) return;
+    const project = state.projects.find((item) => item.id === projectId);
+    if (!project) return;
+    openReportViewer(project.id, project.name);
+    window.history.replaceState({}, "", "/dashboard");
+}
+
 async function pollScan(projectId, projectName) {
     for (let attempt = 0; attempt < 120; attempt += 1) {
         await new Promise((resolve) => {
@@ -1503,11 +1514,13 @@ async function pollScan(projectId, projectName) {
                 return;
             }
 
-            if (scanStatus === "failed") {
+            if (["failed", "cancelled"].includes(scanStatus)) {
                 await loadProjects();
                 showToast(
-                    `Security scan failed for ${projectName}.`,
-                    "error",
+                    scanStatus === "cancelled"
+                        ? `Security scan cancelled for ${projectName}.`
+                        : `Security scan failed for ${projectName}.`,
+                    scanStatus === "cancelled" ? "success" : "error",
                 );
                 return;
             }
@@ -1771,7 +1784,7 @@ function bindEvents() {
 
         elements.minimizedScanProgress.textContent =
             `${Number(event.data.progress || 0)}%`;
-        if (["completed", "failed"].includes(event.data.status)) {
+        if (["completed", "failed", "cancelled"].includes(event.data.status)) {
             loadProjects();
         }
     });
@@ -1878,6 +1891,7 @@ async function initialize() {
 
         showDashboardView();
         await loadProjects();
+        openRequestedReport();
 
     } catch (error) {
         clearSession();
