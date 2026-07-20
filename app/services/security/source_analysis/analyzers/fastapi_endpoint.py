@@ -164,6 +164,87 @@ class FastAPIEndpointSecurityAnalyzer(
         owasp_reference="API10:2023",
     )
 
+    MASS_ASSIGNMENT_RULE = FastAPIEndpointRule(
+        rule_id="FASTAPI-PROPERTY-001",
+        title="Request model is unpacked into a data model",
+        description=(
+            "The endpoint passes every request-model property into another "
+            "constructor or update operation. Sensitive fields may become "
+            "client-controlled even when they were not intended to be writable."
+        ),
+        category="property-authorization",
+        severity=SourceIssueSeverity.HIGH,
+        confidence=SourceIssueConfidence.MEDIUM,
+        remediation=(
+            "Define a dedicated allowlisted input schema and map permitted "
+            "fields explicitly. Never accept ownership, role, privilege, "
+            "approval, balance, or tenant fields from an unrestricted payload."
+        ),
+        cwe_id="CWE-915",
+        owasp_reference="API3:2023",
+    )
+
+    UNBOUNDED_COLLECTION_RULE = FastAPIEndpointRule(
+        rule_id="FASTAPI-RESOURCE-001",
+        title="Collection endpoint has no visible pagination limit",
+        description=(
+            "A collection-style GET endpoint does not expose or enforce a "
+            "visible page, cursor, offset, or result limit. Large responses can "
+            "consume excessive database, memory, network, and worker resources."
+        ),
+        category="resource-consumption",
+        severity=SourceIssueSeverity.MEDIUM,
+        confidence=SourceIssueConfidence.MEDIUM,
+        remediation=(
+            "Require bounded pagination, enforce a server-side maximum page "
+            "size, constrain database queries, and test requests at the maximum "
+            "allowed boundary."
+        ),
+        cwe_id="CWE-400",
+        owasp_reference="API4:2023",
+    )
+
+    BUSINESS_FLOW_RULE = FastAPIEndpointRule(
+        rule_id="FASTAPI-FLOW-001",
+        title="Sensitive business flow lacks visible abuse controls",
+        description=(
+            "A sensitive business action does not declare a visible rate-limit, "
+            "throttle, quota, challenge, or idempotency control. Automated abuse "
+            "may exhaust inventory, trigger repeated transactions, or attack "
+            "account workflows."
+        ),
+        category="business-flow-abuse",
+        severity=SourceIssueSeverity.HIGH,
+        confidence=SourceIssueConfidence.MEDIUM,
+        remediation=(
+            "Apply identity- and resource-aware throttling, quotas, idempotency "
+            "keys where appropriate, bot defenses for anonymous flows, and "
+            "security monitoring for repeated failures or high-volume activity."
+        ),
+        cwe_id="CWE-799",
+        owasp_reference="API6:2023",
+    )
+
+    DEPRECATED_ENDPOINT_RULE = FastAPIEndpointRule(
+        rule_id="FASTAPI-INVENTORY-001",
+        title="Deprecated API endpoint remains exposed",
+        description=(
+            "The route is marked deprecated but remains part of the deployed API "
+            "surface. Older endpoints frequently miss controls added to current "
+            "versions and increase the inventory that must be monitored."
+        ),
+        category="api-inventory",
+        severity=SourceIssueSeverity.LOW,
+        confidence=SourceIssueConfidence.HIGH,
+        remediation=(
+            "Define and publish a retirement date, monitor remaining consumers, "
+            "apply the same security controls as the current API, and remove the "
+            "route after the migration window."
+        ),
+        cwe_id="CWE-1059",
+        owasp_reference="API9:2023",
+    )
+
     SENSITIVE_PATH_PARTS = {
         "account",
         "admin",
@@ -216,6 +297,57 @@ class FastAPIEndpointSecurityAnalyzer(
         "size_limit",
         "validate_file",
         "validate_upload",
+    }
+
+    PAGINATION_PARTS = {
+        "cursor",
+        "limit",
+        "max_results",
+        "offset",
+        "page",
+        "page_size",
+        "per_page",
+    }
+
+    COLLECTION_PATH_PARTS = {
+        "accounts",
+        "customers",
+        "documents",
+        "invoices",
+        "orders",
+        "payments",
+        "projects",
+        "reports",
+        "transactions",
+        "users",
+    }
+
+    SENSITIVE_FLOW_PARTS = {
+        "book",
+        "checkout",
+        "coupon",
+        "forgot-password",
+        "login",
+        "otp",
+        "password-reset",
+        "purchase",
+        "redeem",
+        "register",
+        "resend",
+        "signup",
+        "transfer",
+        "verify",
+        "withdraw",
+    }
+
+    ABUSE_CONTROL_PARTS = {
+        "captcha",
+        "challenge",
+        "idempotency",
+        "quota",
+        "rate_limit",
+        "ratelimit",
+        "throttle",
     }
 
     HTTP_METHODS = {
@@ -301,6 +433,10 @@ class FastAPIEndpointSecurityAnalyzer(
                     "FASTAPI-FILE-001",
                     "FASTAPI-ERROR-001",
                     "FASTAPI-REDIRECT-001",
+                    "FASTAPI-PROPERTY-001",
+                    "FASTAPI-RESOURCE-001",
+                    "FASTAPI-FLOW-001",
+                    "FASTAPI-INVENTORY-001",
                 ],
             },
         )
@@ -411,6 +547,11 @@ class _FastAPIEndpointVisitor(
             self._inspect_redirects(
                 endpoint,
             )
+
+            self._inspect_property_authorization(endpoint)
+            self._inspect_resource_limits(endpoint)
+            self._inspect_business_flow(endpoint)
+            self._inspect_inventory(endpoint)
 
     def _build_endpoint(
         self,
@@ -661,6 +802,100 @@ class _FastAPIEndpointVisitor(
                     ),
                     endpoint=endpoint,
                     node=child,
+                )
+                return
+
+    def _inspect_property_authorization(
+        self,
+        endpoint: FastAPIEndpoint,
+    ) -> None:
+        request_parameters = set(endpoint.parameters)
+        for child in ast.walk(endpoint.node):
+            if not isinstance(child, ast.Call):
+                continue
+            for keyword in child.keywords:
+                if keyword.arg is not None:
+                    continue
+                value = keyword.value
+                if not isinstance(value, ast.Call):
+                    continue
+                if self._call_name(value.func).rsplit(".", 1)[-1] not in {
+                    "dict",
+                    "model_dump",
+                }:
+                    continue
+                if (
+                    isinstance(value.func, ast.Attribute)
+                    and isinstance(value.func.value, ast.Name)
+                    and value.func.value.id in request_parameters
+                ):
+                    self._add_issue(
+                        rule=FastAPIEndpointSecurityAnalyzer.MASS_ASSIGNMENT_RULE,
+                        endpoint=endpoint,
+                        node=child,
+                    )
+                    return
+
+    def _inspect_resource_limits(
+        self,
+        endpoint: FastAPIEndpoint,
+    ) -> None:
+        if endpoint.method != "GET":
+            return
+        terminal_path = endpoint.path.rstrip("/").rsplit("/", 1)[-1].lower()
+        collection_style = (
+            terminal_path in FastAPIEndpointSecurityAnalyzer.COLLECTION_PATH_PARTS
+            or endpoint.function_name.lower().startswith(("list_", "get_all_"))
+        )
+        if not collection_style:
+            return
+        function_text = (self._node_text(endpoint.node) or "").lower()
+        if any(
+            marker in function_text
+            for marker in FastAPIEndpointSecurityAnalyzer.PAGINATION_PARTS
+        ):
+            return
+        self._add_issue(
+            rule=FastAPIEndpointSecurityAnalyzer.UNBOUNDED_COLLECTION_RULE,
+            endpoint=endpoint,
+            node=endpoint.decorator,
+        )
+
+    def _inspect_business_flow(
+        self,
+        endpoint: FastAPIEndpoint,
+    ) -> None:
+        combined = f"{endpoint.path} {endpoint.function_name}".lower()
+        if not any(
+            marker in combined
+            for marker in FastAPIEndpointSecurityAnalyzer.SENSITIVE_FLOW_PARTS
+        ):
+            return
+        function_text = (self._node_text(endpoint.node) or "").lower()
+        controls = " ".join((*endpoint.dependencies, function_text)).lower()
+        if any(
+            marker in controls
+            for marker in FastAPIEndpointSecurityAnalyzer.ABUSE_CONTROL_PARTS
+        ):
+            return
+        self._add_issue(
+            rule=FastAPIEndpointSecurityAnalyzer.BUSINESS_FLOW_RULE,
+            endpoint=endpoint,
+            node=endpoint.decorator,
+        )
+
+    def _inspect_inventory(
+        self,
+        endpoint: FastAPIEndpoint,
+    ) -> None:
+        for keyword in endpoint.decorator.keywords:
+            if keyword.arg != "deprecated":
+                continue
+            if isinstance(keyword.value, ast.Constant) and keyword.value.value is True:
+                self._add_issue(
+                    rule=FastAPIEndpointSecurityAnalyzer.DEPRECATED_ENDPOINT_RULE,
+                    endpoint=endpoint,
+                    node=endpoint.decorator,
                 )
                 return
 

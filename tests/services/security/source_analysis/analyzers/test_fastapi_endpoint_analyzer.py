@@ -284,6 +284,93 @@ async def redirect():
     )
 
 
+def test_detects_unrestricted_request_model_unpacking() -> None:
+    result = analyze(
+        '''
+@router.post("/profiles")
+async def create_profile(payload: ProfileInput):
+    return Profile(**payload.model_dump())
+'''
+    )
+
+    assert "FASTAPI-PROPERTY-001" in rule_ids(result)
+
+
+def test_explicit_request_field_mapping_is_not_mass_assignment() -> None:
+    result = analyze(
+        '''
+@router.post("/profiles")
+async def create_profile(payload: ProfileInput):
+    return Profile(display_name=payload.display_name)
+'''
+    )
+
+    assert "FASTAPI-PROPERTY-001" not in rule_ids(result)
+
+
+def test_detects_unbounded_collection_endpoint() -> None:
+    result = analyze(
+        '''
+@router.get("/orders")
+async def list_orders(current_user=Depends(get_current_user)):
+    return repository.all()
+'''
+    )
+
+    assert "FASTAPI-RESOURCE-001" in rule_ids(result)
+
+
+def test_bounded_collection_endpoint_is_not_reported() -> None:
+    result = analyze(
+        '''
+@router.get("/orders")
+async def list_orders(
+    limit: int = Query(50, ge=1, le=100),
+    current_user=Depends(get_current_user),
+):
+    return repository.list(limit=limit)
+'''
+    )
+
+    assert "FASTAPI-RESOURCE-001" not in rule_ids(result)
+
+
+def test_detects_sensitive_business_flow_without_abuse_control() -> None:
+    result = analyze(
+        '''
+@router.post("/checkout")
+async def checkout(payload: CheckoutInput):
+    return submit_order(payload)
+'''
+    )
+
+    assert "FASTAPI-FLOW-001" in rule_ids(result)
+
+
+def test_rate_limited_business_flow_is_not_reported() -> None:
+    result = analyze(
+        '''
+@router.post("/checkout", dependencies=[Depends(rate_limit_checkout)])
+async def checkout(payload: CheckoutInput):
+    return submit_order(payload)
+'''
+    )
+
+    assert "FASTAPI-FLOW-001" not in rule_ids(result)
+
+
+def test_detects_exposed_deprecated_endpoint() -> None:
+    result = analyze(
+        '''
+@router.get("/v1/orders/{order_id}", deprecated=True)
+async def old_order(order_id: int):
+    return load_order(order_id)
+'''
+    )
+
+    assert "FASTAPI-INVENTORY-001" in rule_ids(result)
+
+
 def test_public_health_endpoint_is_not_reported() -> None:
     result = analyze(
         '''
