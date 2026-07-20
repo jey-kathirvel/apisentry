@@ -51,6 +51,7 @@ def test_dashboard_contains_complete_authentication_ui(
         assert f'id="{element_id}"' in response.text
 
     assert 'data-auth-panel="signup"' in response.text
+    assert "check your spam or junk folder" in response.text
     assert 'src="/static/js/project-dashboard.js"' in response.text
 
 
