@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.email_verification import EmailVerification
 from app.models.user import User
 from app.services.mail.exceptions import EmailDeliveryError
+from app.services.auth.exceptions import WeakPasswordError
 import app.api.v1.auth as auth_api
 import app.services.auth_service as auth_service
 
@@ -128,3 +129,34 @@ def test_signup_delivery_failure_returns_retryable_response(
 
     assert response.status_code == 503
     assert "try again" in response.json()["detail"].lower()
+
+
+def test_signup_validation_error_returns_actionable_response(
+    monkeypatch,
+) -> None:
+    def reject_password(**_kwargs):
+        raise WeakPasswordError(
+            "Password does not meet the security requirements.",
+            errors=[
+                "Password must contain at least one uppercase letter.",
+                "Password must contain at least one number.",
+            ],
+        )
+
+    monkeypatch.setattr(auth_api, "create_user", reject_password)
+    app = FastAPI()
+    app.include_router(router, prefix="/api/v1")
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/signup",
+            json={
+                "full_name": "Ads Team",
+                "email": "team@ads-ai.in",
+                "password": "password!",
+            },
+        )
+
+    assert response.status_code == 422
+    assert "uppercase" in response.json()["detail"]
+    assert "number" in response.json()["detail"]

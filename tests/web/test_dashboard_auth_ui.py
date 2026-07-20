@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.web.dashboard import router
+from app.main import app as application
 
 
 @pytest.fixture()
@@ -19,6 +20,7 @@ def client() -> TestClient:
     [
         "/dashboard",
         "/signup",
+        "/login",
         "/verify-email?token=test-token",
         "/reset-password?token=test-token",
     ],
@@ -50,3 +52,14 @@ def test_dashboard_contains_complete_authentication_ui(
 
     assert 'data-auth-panel="signup"' in response.text
     assert 'src="/static/js/project-dashboard.js"' in response.text
+
+
+def test_application_root_redirects_to_dashboard() -> None:
+    app_client = TestClient(application)
+    response = app_client.get(
+        "/",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/dashboard"

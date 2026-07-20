@@ -39,6 +39,7 @@ from app.services import (
     verify_email,
 )
 from app.services.mail.exceptions import EmailDeliveryError
+from app.services.auth.exceptions import AuthenticationValidationError
 
 
 router = APIRouter(
@@ -65,6 +66,11 @@ def signup(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
+        ) from exc
+    except AuthenticationValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=" ".join(exc.errors),
         ) from exc
     except EmailDeliveryError as exc:
         raise HTTPException(

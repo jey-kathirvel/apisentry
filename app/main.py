@@ -3,7 +3,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
@@ -108,13 +108,15 @@ async def unhandled_exception_handler(
     )
 
 
-@app.get("/")
-def application_root() -> dict[str, str]:
-    return {
-        "name": settings.app_name,
-        "status": "running",
-        "documentation": "/api/docs",
-    }
+@app.get(
+    "/",
+    include_in_schema=False,
+)
+def application_root() -> RedirectResponse:
+    return RedirectResponse(
+        url="/dashboard",
+        status_code=307,
+    )
 
 
 app.include_router(

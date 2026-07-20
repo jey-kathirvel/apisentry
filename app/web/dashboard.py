@@ -44,6 +44,11 @@ def dashboard_page(
     response_class=HTMLResponse,
     include_in_schema=False,
 )
+@router.get(
+    "/login",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
 def authentication_page(
     request: Request,
 ):
