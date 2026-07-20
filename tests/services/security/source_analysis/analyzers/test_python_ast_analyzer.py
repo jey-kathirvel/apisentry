@@ -190,6 +190,70 @@ def test_parameterized_sql_is_not_reported() -> None:
     assert result.issue_count == 0
 
 
+def test_detects_dynamic_outbound_url_without_timeout() -> None:
+    result = analyze(
+        (
+            "import requests\n"
+            "response = requests.get(user_url)\n"
+        ),
+    )
+
+    assert {
+        issue.rule_id
+        for issue in result.issues
+    } == {"SSRF-001", "HTTP-001"}
+
+    ssrf = next(
+        issue
+        for issue in result.issues
+        if issue.rule_id == "SSRF-001"
+    )
+    assert ssrf.owasp_reference == "API7:2023"
+    assert ssrf.cwe_id == "CWE-918"
+
+
+def test_detects_request_method_url_and_disabled_tls_verification() -> None:
+    result = analyze(
+        (
+            "import httpx\n"
+            "response = httpx.request(\n"
+            "    'GET', target_url, timeout=5, verify=False\n"
+            ")\n"
+        ),
+    )
+
+    assert {
+        issue.rule_id
+        for issue in result.issues
+    } == {"SSRF-001", "HTTP-002"}
+
+
+def test_static_outbound_url_with_controls_is_not_reported() -> None:
+    result = analyze(
+        (
+            "import requests\n"
+            "response = requests.get(\n"
+            "    'https://api.example.com/health',\n"
+            "    timeout=(2, 10),\n"
+            "    verify=True,\n"
+            ")\n"
+        ),
+    )
+
+    assert result.issue_count == 0
+
+
+def test_keyword_url_is_checked_for_ssrf() -> None:
+    result = analyze(
+        (
+            "import httpx\n"
+            "response = httpx.get(url=target, timeout=5)\n"
+        ),
+    )
+
+    assert [issue.rule_id for issue in result.issues] == ["SSRF-001"]
+
+
 def test_records_function_and_class_scope() -> None:
     result = analyze(
         (
@@ -325,5 +389,10 @@ def test_result_metadata() -> None:
 
     assert (
         "SQL-001"
+        in result.metadata["rule_ids"]
+    )
+
+    assert (
+        "SSRF-001"
         in result.metadata["rule_ids"]
     )

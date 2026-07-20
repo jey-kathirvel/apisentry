@@ -179,6 +179,65 @@ class PythonASTSecurityAnalyzer(
         owasp_reference="API8:2023",
     )
 
+    SSRF_RULE = PythonSecurityRule(
+        rule_id="SSRF-001",
+        title="Potential server-side request forgery",
+        description=(
+            "A request-controlled or dynamically constructed URL is passed "
+            "to an outbound HTTP client. An attacker may be able to reach "
+            "internal services, cloud metadata endpoints, or unintended hosts."
+        ),
+        category="server-side-request-forgery",
+        severity=SourceIssueSeverity.HIGH,
+        confidence=SourceIssueConfidence.MEDIUM,
+        remediation=(
+            "Resolve outbound destinations from a strict scheme and hostname "
+            "allowlist, reject private and link-local addresses after DNS "
+            "resolution, disable unsafe redirects, and never forward caller "
+            "credentials to an untrusted destination."
+        ),
+        cwe_id="CWE-918",
+        owasp_reference="API7:2023",
+    )
+
+    HTTP_TIMEOUT_RULE = PythonSecurityRule(
+        rule_id="HTTP-001",
+        title="Outbound HTTP request has no timeout",
+        description=(
+            "An outbound HTTP request does not define a timeout. A slow or "
+            "unresponsive upstream can retain workers and exhaust service "
+            "resources."
+        ),
+        category="unrestricted-resource-consumption",
+        severity=SourceIssueSeverity.MEDIUM,
+        confidence=SourceIssueConfidence.HIGH,
+        remediation=(
+            "Set explicit connection and read timeouts, bound retries with "
+            "backoff, and enforce an overall request deadline."
+        ),
+        cwe_id="CWE-400",
+        owasp_reference="API4:2023",
+    )
+
+    TLS_VERIFY_RULE = PythonSecurityRule(
+        rule_id="HTTP-002",
+        title="TLS certificate verification disabled",
+        description=(
+            "An outbound HTTPS client explicitly disables certificate "
+            "verification, allowing a network attacker to impersonate the "
+            "upstream service."
+        ),
+        category="unsafe-api-consumption",
+        severity=SourceIssueSeverity.HIGH,
+        confidence=SourceIssueConfidence.HIGH,
+        remediation=(
+            "Keep certificate verification enabled and configure a trusted CA "
+            "bundle when the upstream uses a private certificate authority."
+        ),
+        cwe_id="CWE-295",
+        owasp_reference="API10:2023",
+    )
+
     def analyze(
         self,
         *,
@@ -236,6 +295,9 @@ class PythonASTSecurityAnalyzer(
                     "DESER-001",
                     "DESER-002",
                     "SQL-001",
+                    "SSRF-001",
+                    "HTTP-001",
+                    "HTTP-002",
                 ],
             },
         ).deduplicate()
@@ -281,6 +343,25 @@ class _PythonSecurityVisitor(
 
     YAML_LOAD_FUNCTIONS = {
         "yaml.load",
+    }
+
+    OUTBOUND_HTTP_FUNCTIONS = {
+        "httpx.delete",
+        "httpx.get",
+        "httpx.head",
+        "httpx.options",
+        "httpx.patch",
+        "httpx.post",
+        "httpx.put",
+        "httpx.request",
+        "requests.delete",
+        "requests.get",
+        "requests.head",
+        "requests.options",
+        "requests.patch",
+        "requests.post",
+        "requests.put",
+        "requests.request",
     }
 
     def __init__(
@@ -413,6 +494,29 @@ class _PythonSecurityVisitor(
             ):
                 self._add_issue(
                     rule=PythonASTSecurityAnalyzer.SQL_RULE,
+                    node=node,
+                )
+
+        if call_name in self.OUTBOUND_HTTP_FUNCTIONS:
+            url_argument = self._outbound_url_argument(node)
+            if (
+                url_argument is not None
+                and self._is_dynamic_url(url_argument)
+            ):
+                self._add_issue(
+                    rule=PythonASTSecurityAnalyzer.SSRF_RULE,
+                    node=node,
+                )
+
+            if not self._has_keyword(node, "timeout"):
+                self._add_issue(
+                    rule=PythonASTSecurityAnalyzer.HTTP_TIMEOUT_RULE,
+                    node=node,
+                )
+
+            if self._has_false_keyword(node, "verify"):
+                self._add_issue(
+                    rule=PythonASTSecurityAnalyzer.TLS_VERIFY_RULE,
                     node=node,
                 )
 
@@ -586,6 +690,52 @@ class _PythonSecurityVisitor(
             return True
 
         return False
+
+    @staticmethod
+    def _has_keyword(
+        node: ast.Call,
+        keyword_name: str,
+    ) -> bool:
+        return any(
+            keyword.arg == keyword_name
+            for keyword in node.keywords
+        )
+
+    @staticmethod
+    def _has_false_keyword(
+        node: ast.Call,
+        keyword_name: str,
+    ) -> bool:
+        for keyword in node.keywords:
+            if keyword.arg != keyword_name:
+                continue
+            value = keyword.value
+            return (
+                isinstance(value, ast.Constant)
+                and value.value is False
+            )
+        return False
+
+    @staticmethod
+    def _outbound_url_argument(node: ast.Call) -> ast.AST | None:
+        for keyword in node.keywords:
+            if keyword.arg == "url":
+                return keyword.value
+
+        if not node.args:
+            return None
+
+        call_name = _PythonSecurityVisitor._call_name(node.func)
+        if call_name.endswith(".request") and len(node.args) > 1:
+            return node.args[1]
+        return node.args[0]
+
+    @staticmethod
+    def _is_dynamic_url(node: ast.AST) -> bool:
+        return not (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+        )
 
     @classmethod
     def _uses_safe_yaml_loader(
