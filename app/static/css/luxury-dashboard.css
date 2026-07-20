@@ -1191,3 +1191,201 @@
     }
 
 }
+
+
+/*
+=====================================================
+ UI-003 PATCH-002
+ LIVE EXECUTIVE SECURITY DATA
+=====================================================
+*/
+
+.security-score-ring {
+
+    --security-score-angle: 0deg;
+
+    background:
+
+        conic-gradient(
+            var(--score-ring-color, var(--lux-gold-400))
+                0deg,
+
+            var(--score-ring-color, var(--lux-gold-500))
+                var(--security-score-angle),
+
+            rgba(255, 255, 255, 0.08)
+                var(--security-score-angle),
+
+            rgba(255, 255, 255, 0.08)
+                360deg
+        );
+
+    transition:
+
+        background 420ms ease,
+
+        box-shadow 420ms ease;
+
+}
+
+
+.security-score-ring.score-critical {
+
+    --score-ring-color: var(--severity-critical);
+
+}
+
+
+.security-score-ring.score-high {
+
+    --score-ring-color: var(--severity-high);
+
+}
+
+
+.security-score-ring.score-medium {
+
+    --score-ring-color: var(--severity-medium);
+
+}
+
+
+.security-score-ring.score-good {
+
+    --score-ring-color: var(--scan-green);
+
+}
+
+
+.security-score-ring.score-excellent {
+
+    --score-ring-color: #4ade80;
+
+}
+
+
+.security-score-ring.has-score {
+
+    box-shadow:
+
+        inset 0 0 28px rgba(212, 175, 55, 0.08),
+
+        0 18px 42px rgba(0, 0, 0, 0.18),
+
+        0 0 28px color-mix(
+            in srgb,
+            var(--score-ring-color) 28%,
+            transparent
+        );
+
+}
+
+
+#securityScoreValue {
+
+    transition:
+
+        color 220ms ease,
+
+        transform 220ms ease;
+
+}
+
+
+#securityScoreValue.score-updated {
+
+    transform: scale(1.06);
+
+}
+
+
+#latestPostureValue.posture-critical {
+
+    color: var(--severity-critical);
+
+}
+
+
+#latestPostureValue.posture-high {
+
+    color: var(--severity-high);
+
+}
+
+
+#latestPostureValue.posture-medium {
+
+    color: var(--severity-medium);
+
+}
+
+
+#latestPostureValue.posture-low {
+
+    color: var(--severity-low);
+
+}
+
+
+#latestPostureValue.posture-secure {
+
+    color: var(--scan-green);
+
+}
+
+
+#latestScanSummary {
+
+    display: grid;
+
+    gap: 4px;
+
+}
+
+
+#latestScanSummary strong {
+
+    display: block;
+
+    overflow: hidden;
+
+    color: var(--lux-text);
+
+    font-size: 11px;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+}
+
+
+#latestScanSummary span {
+
+    display: block;
+
+    color: var(--lux-text-soft);
+
+    font-size: 10px;
+
+    line-height: 1.5;
+
+}
+
+
+.risk-summary-card strong {
+
+    transition:
+
+        color 180ms ease,
+
+        transform 180ms ease;
+
+}
+
+
+.risk-summary-card strong.metric-updated {
+
+    transform: translateY(-2px);
+
+}

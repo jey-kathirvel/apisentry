@@ -11,6 +11,8 @@ const state = {
     ),
     currentUser: null,
     projects: [],
+    securityDashboardKey: "",
+    securityDashboardLoading: false,
 };
 
 const elements = {
@@ -164,6 +166,39 @@ const elements = {
     activeScanSummary: document.getElementById(
         "activeScanSummary"
     ),
+    securityScoreRing: document.getElementById(
+        "securityScoreRing"
+    ),
+    securityScoreValue: document.getElementById(
+        "securityScoreValue"
+    ),
+    securityScoreLabel: document.getElementById(
+        "securityScoreLabel"
+    ),
+    criticalRiskMetric: document.getElementById(
+        "criticalRiskMetric"
+    ),
+    highRiskMetric: document.getElementById(
+        "highRiskMetric"
+    ),
+    mediumRiskMetric: document.getElementById(
+        "mediumRiskMetric"
+    ),
+    lowRiskMetric: document.getElementById(
+        "lowRiskMetric"
+    ),
+    criticalFindingSummary: document.getElementById(
+        "criticalFindingSummary"
+    ),
+    latestPostureValue: document.getElementById(
+        "latestPostureValue"
+    ),
+    latestScanProject: document.getElementById(
+        "latestScanProject"
+    ),
+    latestScanTime: document.getElementById(
+        "latestScanTime"
+    ),
     toastContainer: document.getElementById(
         "toastContainer"
     ),
@@ -202,6 +237,10 @@ function setTokens(
 function clearSession() {
     state.currentUser = null;
     state.projects = [];
+    state.securityDashboardKey = "";
+    state.securityDashboardLoading = false;
+
+    resetExecutiveSecurityDashboard();
 
     setTokens(null, null);
 }
@@ -512,6 +551,583 @@ function escapeHtml(value) {
     return element.innerHTML;
 }
 
+
+function clampSecurityScore(value) {
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+        return null;
+    }
+
+    return Math.max(
+        0,
+        Math.min(100, Math.round(number)),
+    );
+}
+
+function normalizeSeverityCounts(value = {}) {
+    const source = (
+        value
+        && typeof value === "object"
+    )
+        ? value
+        : {};
+
+    return {
+        critical: Number(
+            source.critical
+            || source.CRITICAL
+            || 0
+        ),
+        high: Number(
+            source.high
+            || source.HIGH
+            || 0
+        ),
+        medium: Number(
+            source.medium
+            || source.MEDIUM
+            || 0
+        ),
+        low: Number(
+            source.low
+            || source.LOW
+            || 0
+        ),
+    };
+}
+
+function getReportSummary(payload) {
+    if (!payload || typeof payload !== "object") {
+        return null;
+    }
+
+    if (
+        payload.summary
+        && typeof payload.summary === "object"
+    ) {
+        return payload.summary;
+    }
+
+    if (
+        payload.report
+        && payload.report.summary
+        && typeof payload.report.summary === "object"
+    ) {
+        return payload.report.summary;
+    }
+
+    if (
+        payload.data
+        && payload.data.summary
+        && typeof payload.data.summary === "object"
+    ) {
+        return payload.data.summary;
+    }
+
+    return null;
+}
+
+function getLatestScanTimestamp(project, report) {
+    const scan = (
+        project.latest_scan
+        || report?.scan
+        || {}
+    );
+
+    const candidates = [
+        scan.completed_at,
+        scan.finished_at,
+        scan.updated_at,
+        scan.started_at,
+        scan.created_at,
+        report?.generated_at,
+        project.updated_at,
+        project.created_at,
+    ];
+
+    for (const value of candidates) {
+        if (!value) {
+            continue;
+        }
+
+        const timestamp = new Date(value).getTime();
+
+        if (Number.isFinite(timestamp)) {
+            return {
+                raw: value,
+                timestamp,
+            };
+        }
+    }
+
+    return {
+        raw: null,
+        timestamp: 0,
+    };
+}
+
+function formatSecurityDateTime(value) {
+    if (!value) {
+        return "Completed scan";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Completed scan";
+    }
+
+    return new Intl.DateTimeFormat(
+        undefined,
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        },
+    ).format(date);
+}
+
+function getPostureFromSecurityData(
+    score,
+    severityCounts,
+) {
+    if (severityCounts.critical > 0) {
+        return {
+            label: "Critical",
+            className: "posture-critical",
+            ringClass: "score-critical",
+        };
+    }
+
+    if (severityCounts.high > 0) {
+        return {
+            label: "High Risk",
+            className: "posture-high",
+            ringClass: "score-high",
+        };
+    }
+
+    if (
+        severityCounts.medium > 0
+        || (
+            Number.isFinite(score)
+            && score < 70
+        )
+    ) {
+        return {
+            label: "Needs Review",
+            className: "posture-medium",
+            ringClass: "score-medium",
+        };
+    }
+
+    if (
+        severityCounts.low > 0
+        || (
+            Number.isFinite(score)
+            && score < 85
+        )
+    ) {
+        return {
+            label: "Moderate",
+            className: "posture-low",
+            ringClass: "score-good",
+        };
+    }
+
+    return {
+        label: "Secure",
+        className: "posture-secure",
+        ringClass: "score-excellent",
+    };
+}
+
+function animateMetric(element, value) {
+    if (!element) {
+        return;
+    }
+
+    element.textContent = String(value);
+    element.classList.add("metric-updated");
+
+    window.setTimeout(
+        () => {
+            element.classList.remove(
+                "metric-updated"
+            );
+        },
+        240,
+    );
+}
+
+function resetExecutiveSecurityDashboard() {
+    animateMetric(elements.criticalRiskMetric, 0);
+    animateMetric(elements.highRiskMetric, 0);
+    animateMetric(elements.mediumRiskMetric, 0);
+    animateMetric(elements.lowRiskMetric, 0);
+    animateMetric(elements.criticalFindingSummary, 0);
+
+    if (elements.securityScoreValue) {
+        elements.securityScoreValue.textContent = "—";
+    }
+
+    if (elements.securityScoreLabel) {
+        elements.securityScoreLabel.textContent =
+            "Security Score";
+    }
+
+    if (elements.securityScoreRing) {
+        elements.securityScoreRing.style.setProperty(
+            "--security-score-angle",
+            "0deg",
+        );
+
+        elements.securityScoreRing.classList.remove(
+            "has-score",
+            "score-critical",
+            "score-high",
+            "score-medium",
+            "score-good",
+            "score-excellent",
+        );
+
+        elements.securityScoreRing.setAttribute(
+            "aria-label",
+            "Security score unavailable",
+        );
+    }
+
+    if (elements.latestPostureValue) {
+        elements.latestPostureValue.textContent =
+            "Pending";
+
+        elements.latestPostureValue.className = "";
+    }
+
+    if (elements.latestScanProject) {
+        elements.latestScanProject.textContent =
+            "No completed scan";
+    }
+
+    if (elements.latestScanTime) {
+        elements.latestScanTime.textContent =
+            "Security findings and score will populate "
+            + "after the first completed source-code scan.";
+    }
+}
+
+function renderExecutiveSecurityDashboard(data) {
+    const score = clampSecurityScore(
+        data.securityScore
+    );
+
+    const severityCounts =
+        normalizeSeverityCounts(
+            data.severityCounts
+        );
+
+    animateMetric(
+        elements.criticalRiskMetric,
+        severityCounts.critical,
+    );
+
+    animateMetric(
+        elements.highRiskMetric,
+        severityCounts.high,
+    );
+
+    animateMetric(
+        elements.mediumRiskMetric,
+        severityCounts.medium,
+    );
+
+    animateMetric(
+        elements.lowRiskMetric,
+        severityCounts.low,
+    );
+
+    animateMetric(
+        elements.criticalFindingSummary,
+        severityCounts.critical,
+    );
+
+    if (
+        score !== null
+        && elements.securityScoreValue
+    ) {
+        elements.securityScoreValue.textContent =
+            `${score}`;
+
+        elements.securityScoreValue.classList.add(
+            "score-updated"
+        );
+
+        window.setTimeout(
+            () => {
+                elements.securityScoreValue
+                    .classList.remove(
+                        "score-updated"
+                    );
+            },
+            260,
+        );
+    }
+
+    const posture = getPostureFromSecurityData(
+        score,
+        severityCounts,
+    );
+
+    if (elements.securityScoreRing) {
+        const angle = (
+            score === null
+                ? 0
+                : score * 3.6
+        );
+
+        elements.securityScoreRing.style.setProperty(
+            "--security-score-angle",
+            `${angle}deg`,
+        );
+
+        elements.securityScoreRing.classList.remove(
+            "score-critical",
+            "score-high",
+            "score-medium",
+            "score-good",
+            "score-excellent",
+        );
+
+        elements.securityScoreRing.classList.add(
+            "has-score",
+            posture.ringClass,
+        );
+
+        elements.securityScoreRing.setAttribute(
+            "aria-label",
+            score === null
+                ? "Security score unavailable"
+                : `Overall security score ${score} out of 100`,
+        );
+    }
+
+    if (elements.latestPostureValue) {
+        elements.latestPostureValue.textContent =
+            posture.label;
+
+        elements.latestPostureValue.className =
+            posture.className;
+    }
+
+    if (elements.latestScanProject) {
+        elements.latestScanProject.textContent =
+            data.latestProjectName
+            || "Completed security scan";
+    }
+
+    if (elements.latestScanTime) {
+        const scoreText = (
+            score === null
+                ? ""
+                : ` · Score ${score}/100`
+        );
+
+        elements.latestScanTime.textContent =
+            `${formatSecurityDateTime(
+                data.latestScanAt
+            )}${scoreText}`;
+    }
+}
+
+async function loadProjectSecurityReport(project) {
+    const response = await apiFetch(
+        `/projects/${project.id}/report`,
+    );
+
+    if (!response.ok) {
+        return null;
+    }
+
+    const report = await parseResponse(response);
+    const summary = getReportSummary(report);
+
+    if (!summary) {
+        return null;
+    }
+
+    const severityCounts =
+        normalizeSeverityCounts(
+            summary.severity_counts
+            || summary.severity_summary
+            || report.severity_counts
+            || {},
+        );
+
+    const score = clampSecurityScore(
+        summary.score
+        ?? summary.security_score
+        ?? project.security_score,
+    );
+
+    const scanDate = getLatestScanTimestamp(
+        project,
+        report,
+    );
+
+    return {
+        project,
+        report,
+        score,
+        severityCounts,
+        latestScanAt: scanDate.raw,
+        latestScanTimestamp:
+            scanDate.timestamp,
+    };
+}
+
+async function refreshExecutiveSecurityDashboard(
+    projects,
+) {
+    const candidates = projects.filter(
+        (project) => {
+            const status = String(
+                project.status || ""
+            ).toLowerCase();
+
+            return (
+                status === "completed"
+                || project.report_available === true
+                || Number(project.security_score || 0) > 0
+            );
+        },
+    );
+
+    const dashboardKey = candidates
+        .map(
+            (project) => [
+                project.id,
+                project.status,
+                project.security_score,
+                project.updated_at,
+            ].join(":")
+        )
+        .join("|");
+
+    if (
+        state.securityDashboardLoading
+        || (
+            dashboardKey
+            && dashboardKey
+                === state.securityDashboardKey
+        )
+    ) {
+        return;
+    }
+
+    state.securityDashboardKey = dashboardKey;
+
+    if (candidates.length === 0) {
+        resetExecutiveSecurityDashboard();
+        return;
+    }
+
+    state.securityDashboardLoading = true;
+
+    try {
+        const results = await Promise.allSettled(
+            candidates.map(
+                loadProjectSecurityReport
+            ),
+        );
+
+        const reports = results
+            .filter(
+                (result) =>
+                    result.status === "fulfilled"
+                    && result.value
+            )
+            .map(
+                (result) => result.value
+            );
+
+        if (reports.length === 0) {
+            resetExecutiveSecurityDashboard();
+            return;
+        }
+
+        const severityCounts = {
+            critical: 0,
+            high: 0,
+            medium: 0,
+            low: 0,
+        };
+
+        const validScores = [];
+
+        for (const item of reports) {
+            severityCounts.critical +=
+                item.severityCounts.critical;
+
+            severityCounts.high +=
+                item.severityCounts.high;
+
+            severityCounts.medium +=
+                item.severityCounts.medium;
+
+            severityCounts.low +=
+                item.severityCounts.low;
+
+            if (item.score !== null) {
+                validScores.push(item.score);
+            }
+        }
+
+        const latestReport = reports
+            .slice()
+            .sort(
+                (left, right) =>
+                    right.latestScanTimestamp
+                    - left.latestScanTimestamp
+            )[0];
+
+        const securityScore = (
+            validScores.length > 0
+                ? Math.round(
+                    validScores.reduce(
+                        (total, value) =>
+                            total + value,
+                        0,
+                    )
+                    / validScores.length
+                )
+                : null
+        );
+
+        renderExecutiveSecurityDashboard({
+            securityScore,
+            severityCounts,
+            latestProjectName:
+                latestReport.project.name,
+            latestScanAt:
+                latestReport.latestScanAt,
+        });
+
+    } catch (error) {
+        console.error(
+            "Unable to aggregate security dashboard",
+            error,
+        );
+
+        resetExecutiveSecurityDashboard();
+
+    } finally {
+        state.securityDashboardLoading = false;
+    }
+}
+
 function updateMetrics(projects) {
     const countStatus = (status) => (
         projects.filter(
@@ -533,6 +1149,20 @@ function updateMetrics(projects) {
 
     elements.completedProjectsMetric.textContent =
         countStatus("completed");
+
+    if (elements.applicationSummary) {
+        elements.applicationSummary.textContent =
+            projects.length;
+    }
+
+    if (elements.activeScanSummary) {
+        elements.activeScanSummary.textContent =
+            countStatus("scanning");
+    }
+
+    void refreshExecutiveSecurityDashboard(
+        projects
+    );
 }
 
 function renderProjects(projects) {

@@ -409,15 +409,16 @@
                         <div class="posture-summary">
 
                             <div
+                                id="securityScoreRing"
                                 class="security-score-ring"
                                 aria-label="Security score unavailable"
                             >
 
                                 <div class="security-score-content">
 
-                                    <strong>—</strong>
+                                    <strong id="securityScoreValue">—</strong>
 
-                                    <span>
+                                    <span id="securityScoreLabel">
                                         Security Score
                                     </span>
 
@@ -505,20 +506,36 @@
 
                             <div class="today-security-item">
                                 <span>Critical findings</span>
-                                <strong class="text-critical">0</strong>
+                                <strong
+                                    id="criticalFindingSummary"
+                                    class="text-critical"
+                                >
+                                    0
+                                </strong>
                             </div>
 
                             <div class="today-security-item">
                                 <span>Latest posture</span>
-                                <strong>Pending</strong>
+                                <strong id="latestPostureValue">
+                                    Pending
+                                </strong>
                             </div>
 
                         </div>
 
-                        <p class="today-security-note">
-                            Security findings and score will populate
-                            after the first completed source-code scan.
-                        </p>
+                        <div
+                            id="latestScanSummary"
+                            class="today-security-note"
+                        >
+                            <strong id="latestScanProject">
+                                No completed scan
+                            </strong>
+
+                            <span id="latestScanTime">
+                                Security findings and score will populate
+                                after the first completed source-code scan.
+                            </span>
+                        </div>
 
                     </aside>
 
