@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="/static/css/luxury-theme.css?v=ui001">
     <link rel="stylesheet" href="/static/css/luxury-layout.css?v=ui002">
     <link rel="stylesheet" href="/static/css/luxury-dashboard.css?v=ui003">
+    <link rel="stylesheet" href="/static/css/luxury-footer.css?v=ui004">
 </head>
 
 <body>
@@ -35,7 +36,7 @@
         <section class="auth-brand-panel">
 
             <div class="brand-badge">
-                AS
+                asd-ai
             </div>
 
             <p class="eyebrow">
@@ -914,5 +915,48 @@
 
 <script src="/static/js/project-dashboard.js"></script>
 
+
+<footer class="app-footer">
+    <div class="app-footer-inner">
+
+        <span>
+            © <span id="footerYear"></span> API Sentry
+        </span>
+
+        <span class="footer-separator">•</span>
+
+        <span>
+            Powered by
+            <strong style="color:#d4af37;">
+                ADS-AI Digital Solutions
+            </strong>
+        </span>
+
+        <span class="footer-separator">•</span>
+
+        <a
+            href="https://ads-ai.in"
+            target="_blank"
+            rel="noopener"
+        >
+            https://ads-ai.in
+        </a>
+
+        <span class="footer-separator">•</span>
+
+        <span>
+            Enterprise Edition
+        </span>
+
+    </div>
+</footer>
+
+
+<script>
+document.getElementById("footerYear").textContent =
+new Date().getFullYear();
+</script>
+
 </body>
+
 </html>
