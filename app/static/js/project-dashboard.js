@@ -158,6 +158,12 @@ const elements = {
     completedProjectsMetric: document.getElementById(
         "completedProjectsMetric"
     ),
+    applicationSummary: document.getElementById(
+        "applicationSummary"
+    ),
+    activeScanSummary: document.getElementById(
+        "activeScanSummary"
+    ),
     toastContainer: document.getElementById(
         "toastContainer"
     ),

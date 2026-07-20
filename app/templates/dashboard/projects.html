@@ -16,6 +16,7 @@
     >
     <link rel="stylesheet" href="/static/css/luxury-theme.css?v=ui001">
     <link rel="stylesheet" href="/static/css/luxury-layout.css?v=ui002">
+    <link rel="stylesheet" href="/static/css/luxury-dashboard.css?v=ui003">
 </head>
 
 <body>
@@ -328,11 +329,11 @@
 
                 <div>
                     <p class="eyebrow">
-                        SECURITY WORKSPACE
+                        API SECURITY OPERATIONS
                     </p>
 
                     <h1>
-                        Project Dashboard
+                        Security Command Center
                     </h1>
                 </div>
 
@@ -365,78 +366,243 @@
             class="content-section"
         >
 
-            <div class="welcome-banner">
+            <div class="security-command-center">
 
-                <div>
-                    <p class="eyebrow light-eyebrow">
-                        API SENTRY
-                    </p>
+                <div class="command-center-grid">
 
-                    <h2>
-                        Discover, scan and strengthen your APIs.
-                    </h2>
+                    <article
+                        id="securityPosture"
+                        class="security-posture-panel"
+                    >
 
-                    <p>
-                        Upload a project to detect its language,
-                        framework and prepare a security scan.
-                    </p>
+                        <div class="posture-panel-header">
+
+                            <div>
+
+                                <p class="eyebrow light-eyebrow">
+                                    API SECURITY POSTURE
+                                </p>
+
+                                <h2>
+                                    Security intelligence across
+                                    your application portfolio.
+                                </h2>
+
+                                <p>
+                                    Review exposure, active scans and
+                                    application coverage from one
+                                    security operations workspace.
+                                </p>
+
+                            </div>
+
+                            <button
+                                id="bannerUploadButton"
+                                class="button"
+                                type="button"
+                            >
+                                + New Security Scan
+                            </button>
+
+                        </div>
+
+                        <div class="posture-summary">
+
+                            <div
+                                class="security-score-ring"
+                                aria-label="Security score unavailable"
+                            >
+
+                                <div class="security-score-content">
+
+                                    <strong>—</strong>
+
+                                    <span>
+                                        Security Score
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                            <div class="risk-summary-grid">
+
+                                <article
+                                    class="
+                                        risk-summary-card
+                                        risk-critical
+                                    "
+                                >
+                                    <span>Critical</span>
+                                    <strong id="criticalRiskMetric">0</strong>
+                                    <small>Awaiting scan data</small>
+                                </article>
+
+                                <article
+                                    class="
+                                        risk-summary-card
+                                        risk-high
+                                    "
+                                >
+                                    <span>High Risk</span>
+                                    <strong id="highRiskMetric">0</strong>
+                                    <small>Awaiting scan data</small>
+                                </article>
+
+                                <article
+                                    class="
+                                        risk-summary-card
+                                        risk-medium
+                                    "
+                                >
+                                    <span>Medium</span>
+                                    <strong id="mediumRiskMetric">0</strong>
+                                    <small>Awaiting scan data</small>
+                                </article>
+
+                                <article
+                                    class="
+                                        risk-summary-card
+                                        risk-low
+                                    "
+                                >
+                                    <span>Low</span>
+                                    <strong id="lowRiskMetric">0</strong>
+                                    <small>Awaiting scan data</small>
+                                </article>
+
+                            </div>
+
+                        </div>
+
+                    </article>
+
+                    <aside class="today-security-panel">
+
+                        <div class="today-security-header">
+
+                            <h3>
+                                Security Operations
+                            </h3>
+
+                            <span class="live-indicator">
+                                Live
+                            </span>
+
+                        </div>
+
+                        <div class="today-security-list">
+
+                            <div class="today-security-item">
+                                <span>Active scans</span>
+                                <strong id="activeScanSummary">0</strong>
+                            </div>
+
+                            <div class="today-security-item">
+                                <span>Applications</span>
+                                <strong id="applicationSummary">0</strong>
+                            </div>
+
+                            <div class="today-security-item">
+                                <span>Critical findings</span>
+                                <strong class="text-critical">0</strong>
+                            </div>
+
+                            <div class="today-security-item">
+                                <span>Latest posture</span>
+                                <strong>Pending</strong>
+                            </div>
+
+                        </div>
+
+                        <p class="today-security-note">
+                            Security findings and score will populate
+                            after the first completed source-code scan.
+                        </p>
+
+                    </aside>
+
                 </div>
 
-                <button
-                    id="bannerUploadButton"
-                    class="button button-light"
-                    type="button"
-                >
-                    Upload Source Code
-                </button>
+                <section class="operational-overview">
 
-            </div>
+                    <div class="operational-heading">
 
-            <div class="metric-grid">
+                        <div>
 
-                <article class="metric-card">
-                    <div class="metric-icon metric-purple">
-                        ▣
+                            <h3>
+                                Scan Operations
+                            </h3>
+
+                            <p>
+                                Current application and scan lifecycle.
+                            </p>
+
+                        </div>
+
+                        <small>
+                            Real-time project status
+                        </small>
+
                     </div>
 
-                    <div>
-                        <span>Total Projects</span>
-                        <strong id="totalProjectsMetric">0</strong>
-                    </div>
-                </article>
+                    <div class="operational-metric-grid">
 
-                <article class="metric-card">
-                    <div class="metric-icon metric-blue">
-                        ◉
+                        <article class="operational-card">
+
+                            <div class="operational-icon projects">
+                                ◫
+                            </div>
+
+                            <div>
+                                <span>Total Applications</span>
+                                <strong id="totalProjectsMetric">0</strong>
+                            </div>
+
+                        </article>
+
+                        <article class="operational-card">
+
+                            <div class="operational-icon ready">
+                                ◉
+                            </div>
+
+                            <div>
+                                <span>Ready to Scan</span>
+                                <strong id="readyProjectsMetric">0</strong>
+                            </div>
+
+                        </article>
+
+                        <article class="operational-card">
+
+                            <div class="operational-icon scanning">
+                                ◌
+                            </div>
+
+                            <div>
+                                <span>Active Scans</span>
+                                <strong id="scanningProjectsMetric">0</strong>
+                            </div>
+
+                        </article>
+
+                        <article class="operational-card">
+
+                            <div class="operational-icon completed">
+                                ✓
+                            </div>
+
+                            <div>
+                                <span>Completed Scans</span>
+                                <strong id="completedProjectsMetric">0</strong>
+                            </div>
+
+                        </article>
+
                     </div>
 
-                    <div>
-                        <span>Ready to Scan</span>
-                        <strong id="readyProjectsMetric">0</strong>
-                    </div>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-icon metric-orange">
-                        ◌
-                    </div>
-
-                    <div>
-                        <span>Scanning</span>
-                        <strong id="scanningProjectsMetric">0</strong>
-                    </div>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-icon metric-green">
-                        ✓
-                    </div>
-
-                    <div>
-                        <span>Completed</span>
-                        <strong id="completedProjectsMetric">0</strong>
-                    </div>
-                </article>
+                </section>
 
             </div>
 
@@ -451,15 +617,16 @@
 
                 <div>
                     <p class="eyebrow">
-                        SOURCE INVENTORY
+                        API INVENTORY
                     </p>
 
                     <h2>
-                        Your Projects
+                        Protected Applications
                     </h2>
 
                     <p>
-                        Manage uploaded applications and start security scans.
+                        Review source-code assets, initiate scans and
+                        inspect security reports.
                     </p>
                 </div>
 
