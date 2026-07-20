@@ -73,3 +73,12 @@ def test_scan_monitor_page_renders(client: TestClient) -> None:
     assert 'id="monitorProgressBar"' in response.text
     assert "Expected time remaining" in response.text
     assert 'src="/static/js/scan-monitor.js"' in response.text
+
+
+def test_report_viewer_page_renders(client: TestClient) -> None:
+    response = client.get("/report-viewer?project_id=1")
+
+    assert response.status_code == 200
+    assert 'id="findingsList"' in response.text
+    assert "Recommended remediation" not in response.text
+    assert 'src="/static/js/report-viewer.js"' in response.text

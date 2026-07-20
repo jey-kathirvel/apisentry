@@ -23,6 +23,7 @@ from app.services.fastapi_ast_discovery import FastAPIASTDiscovery
 from app.services.security.analyzer import SecurityAnalyzer
 from app.services.security.report_exporter import SecurityReportExporter
 from app.services.security.report_generator import SecurityReportGenerator
+from app.services.security.models import severity_from_score
 from app.services.security.source_analysis import (
     SourceAnalysisContext,
     SourceAnalysisService,
@@ -64,15 +65,24 @@ def report_path(
     scan_job_id: int,
     extension: str,
     report_root: Path | None = None,
+    *,
+    create_parent: bool = True,
 ) -> Path:
     if extension not in {"json", "html"}:
         raise ValueError("Unsupported report format.")
 
-    return _report_directory(
-        project_id,
-        scan_job_id,
-        report_root,
-    ) / f"security-report.{extension}"
+    if create_parent:
+        directory = _report_directory(
+            project_id,
+            scan_job_id,
+            report_root,
+        )
+    else:
+        directory = Path(
+            report_root or settings.report_storage_path
+        ) / str(project_id) / str(scan_job_id)
+
+    return directory / f"security-report.{extension}"
 
 
 def _source_score(source_result) -> int:
@@ -339,6 +349,9 @@ def execute_scan(
         report["summary"]["endpoint_score"] = endpoint_result.score
         report["summary"]["source_score"] = source_score
         report["summary"]["score"] = overall_score
+        report["summary"]["severity"] = severity_from_score(
+            overall_score
+        ).value
 
         json_path = report_path(project.id, scan.id, "json", report_root)
         json_path.write_text(

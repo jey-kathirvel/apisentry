@@ -1172,6 +1172,39 @@ textarea:focus {
     width: min(430px, calc(100vw - 32px));
 }
 
+.report-viewer-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 180;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.report-viewer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 13, 30, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.report-viewer-shell {
+    position: relative;
+    width: min(1380px, 100%);
+    height: min(900px, calc(100vh - 48px));
+    overflow: hidden;
+    border-radius: 20px;
+    background: var(--surface);
+    box-shadow: 0 30px 100px rgba(0, 0, 0, 0.35);
+}
+
+#reportViewerFrame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
 .scan-monitor-frame-shell {
     overflow: hidden;
     border: 1px solid var(--border);
@@ -1245,6 +1278,16 @@ textarea:focus {
         right: 12px;
         bottom: 12px;
         width: calc(100vw - 24px);
+    }
+
+    .report-viewer-panel {
+        padding: 0;
+    }
+
+    .report-viewer-shell {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
     }
 }
 

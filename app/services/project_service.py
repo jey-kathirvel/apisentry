@@ -345,3 +345,45 @@ def get_project_status(
     )
 
     return project, latest_scan
+
+
+def list_project_scans(
+    db: Session,
+    project_id: int,
+    user_id: int,
+) -> tuple[Project, list[ScanJob]]:
+    project = get_owned_project(
+        db=db,
+        project_id=project_id,
+        user_id=user_id,
+    )
+    scans = list(
+        db.scalars(
+            select(ScanJob)
+            .where(ScanJob.project_id == project.id)
+            .order_by(desc(ScanJob.created_at), desc(ScanJob.id))
+        )
+    )
+    return project, scans
+
+
+def get_owned_scan(
+    db: Session,
+    project_id: int,
+    scan_id: int,
+    user_id: int,
+) -> tuple[Project, ScanJob]:
+    project = get_owned_project(
+        db=db,
+        project_id=project_id,
+        user_id=user_id,
+    )
+    scan = db.scalar(
+        select(ScanJob).where(
+            ScanJob.id == scan_id,
+            ScanJob.project_id == project.id,
+        )
+    )
+    if scan is None:
+        raise ProjectNotFoundError("Scan not found.")
+    return project, scan

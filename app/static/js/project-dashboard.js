@@ -141,6 +141,8 @@ const elements = {
     restoreScanMonitorButton: document.getElementById("restoreScanMonitorButton"),
     minimizedScanLabel: document.getElementById("minimizedScanLabel"),
     minimizedScanProgress: document.getElementById("minimizedScanProgress"),
+    reportViewerPanel: document.getElementById("reportViewerPanel"),
+    reportViewerFrame: document.getElementById("reportViewerFrame"),
     projectSearchInput: document.getElementById(
         "projectSearchInput"
     ),
@@ -696,12 +698,11 @@ function renderProjects(projects) {
 
                         ${status === "completed" ? `
                             <button
-                                class="button button-secondary report-button"
+                                class="button button-secondary view-report-button"
                                 type="button"
                                 data-project-id="${project.id}"
-                                data-report-format="html"
                             >
-                                View Report
+                                View Findings
                             </button>
 
                             <button
@@ -777,6 +778,17 @@ function bindProjectActions() {
                     );
                 },
             );
+        });
+
+    document
+        .querySelectorAll(".view-report-button")
+        .forEach((button) => {
+            button.addEventListener("click", () => {
+                const project = state.projects.find(
+                    (item) => item.id === Number(button.dataset.projectId)
+                );
+                if (project) openReportViewer(project.id, project.name);
+            });
         });
 
     document
@@ -1449,6 +1461,22 @@ function restoreScanMonitor() {
     elements.restoreScanMonitorButton.classList.add("hidden");
 }
 
+function openReportViewer(projectId, projectName) {
+    const query = new URLSearchParams({
+        project_id: String(projectId),
+        project_name: projectName,
+    });
+    elements.reportViewerFrame.src = `/report-viewer?${query.toString()}`;
+    elements.reportViewerPanel.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+
+function closeReportViewer() {
+    elements.reportViewerPanel.classList.add("hidden");
+    elements.reportViewerFrame.src = "about:blank";
+    document.body.style.overflow = "";
+}
+
 async function pollScan(projectId, projectName) {
     for (let attempt = 0; attempt < 120; attempt += 1) {
         await new Promise((resolve) => {
@@ -1735,6 +1763,10 @@ function bindEvents() {
             minimizeScanMonitor();
             return;
         }
+        if (event.data?.type === "apisentry:close-report-viewer") {
+            closeReportViewer();
+            return;
+        }
         if (event.data?.type !== "apisentry:scan-status") return;
 
         elements.minimizedScanProgress.textContent =
@@ -1743,6 +1775,10 @@ function bindEvents() {
             loadProjects();
         }
     });
+
+    elements.reportViewerPanel
+        .querySelector(".report-viewer-backdrop")
+        .addEventListener("click", closeReportViewer);
 
     elements.projectSearchInput.addEventListener(
         "input",

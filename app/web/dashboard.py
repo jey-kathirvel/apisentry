@@ -43,6 +43,19 @@ def scan_monitor_page(request: Request):
 
 
 @router.get(
+    "/report-viewer",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+def report_viewer_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard/report_viewer.html",
+        context={"page_title": "API Sentry Security Findings"},
+    )
+
+
+@router.get(
     "/verify-email",
     response_class=HTMLResponse,
     include_in_schema=False,

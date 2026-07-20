@@ -23,6 +23,7 @@ from app.schemas.project import (
     ProjectStatusResponse,
     ProjectUploadResponse,
     ScanJobResponse,
+    ScanHistoryResponse,
 )
 from app.services.archive_service import (
     ArchiveValidationError,
@@ -37,6 +38,8 @@ from app.services.project_service import (
     enum_value,
     get_project_details,
     get_project_status,
+    get_owned_scan,
+    list_project_scans,
     list_projects,
 )
 from app.services.scan_service import report_path
@@ -83,7 +86,7 @@ def serialize_upload(upload) -> ProjectUploadResponse:
     )
 
 
-def serialize_scan(scan) -> ScanJobResponse:
+def serialize_scan(scan, *, report_available: bool = False) -> ScanJobResponse:
     seconds_remaining = None
     if scan.estimated_completion_at is not None:
         estimate = scan.estimated_completion_at
@@ -106,6 +109,7 @@ def serialize_scan(scan) -> ScanJobResponse:
         started_at=scan.started_at,
         completed_at=scan.completed_at,
         error_message=scan.error_message,
+        report_available=report_available,
         created_at=scan.created_at,
     )
 
@@ -271,17 +275,16 @@ def start_project_scan(
 
 
 @router.get(
-    "/{project_id}/report",
-    response_class=FileResponse,
+    "/{project_id}/scans",
+    response_model=ScanHistoryResponse,
 )
-def get_project_report(
+def get_project_scan_history(
     project_id: int,
-    format: str = "json",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     try:
-        project, latest_scan = get_project_status(
+        project, scans = list_project_scans(
             db=db,
             project_id=project_id,
             user_id=current_user.id,
@@ -292,7 +295,55 @@ def get_project_report(
             detail=str(exc),
         ) from exc
 
-    if latest_scan is None or enum_value(latest_scan.status) != "completed":
+    serialized = [
+        serialize_scan(
+            scan,
+            report_available=(
+                report_path(
+                    project.id,
+                    scan.id,
+                    "json",
+                    create_parent=False,
+                ).is_file()
+            ),
+        )
+        for scan in scans
+    ]
+    return ScanHistoryResponse(scans=serialized, total=len(serialized))
+
+
+@router.get(
+    "/{project_id}/report",
+    response_class=FileResponse,
+)
+def get_project_report(
+    project_id: int,
+    format: str = "json",
+    scan_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        if scan_id is None:
+            project, selected_scan = get_project_status(
+                db=db,
+                project_id=project_id,
+                user_id=current_user.id,
+            )
+        else:
+            project, selected_scan = get_owned_scan(
+                db=db,
+                project_id=project_id,
+                scan_id=scan_id,
+                user_id=current_user.id,
+            )
+    except ProjectNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    if selected_scan is None or enum_value(selected_scan.status) != "completed":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A completed security report is not available.",
@@ -307,8 +358,9 @@ def get_project_report(
 
     path = report_path(
         project.id,
-        latest_scan.id,
+        selected_scan.id,
         normalized_format,
+        create_parent=False,
     )
     if not path.is_file():
         raise HTTPException(
@@ -325,7 +377,7 @@ def get_project_report(
         path,
         media_type=media_type,
         filename=(
-            f"api-sentry-{project.id}-scan-{latest_scan.id}."
+            f"api-sentry-{project.id}-scan-{selected_scan.id}."
             f"{normalized_format}"
         ),
     )

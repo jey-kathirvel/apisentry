@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="/static/css/report-viewer.css">
+</head>
+<body>
+    <main class="report-viewer">
+        <header class="report-header">
+            <div>
+                <p class="eyebrow">SECURITY INTELLIGENCE</p>
+                <h1 id="reportProjectName">Security findings</h1>
+                <p id="reportGeneratedAt" class="report-subtitle">Loading report…</p>
+            </div>
+            <div class="report-header-actions">
+                <select id="scanHistorySelect" aria-label="Select scan"></select>
+                <button id="downloadHtmlButton" class="button secondary" type="button">HTML Report</button>
+                <button id="downloadJsonButton" class="button secondary" type="button">JSON</button>
+                <button id="closeReportButton" class="icon-button" type="button" aria-label="Close report">×</button>
+            </div>
+        </header>
+
+        <section id="reportLoading" class="state-card">Loading security findings…</section>
+        <section id="reportError" class="state-card error hidden"></section>
+
+        <div id="reportContent" class="hidden">
+            <section class="summary-grid">
+                <article class="score-card"><span>Security score</span><strong id="reportScore">—</strong><small id="reportRisk">—</small></article>
+                <article><span>Total findings</span><strong id="findingCount">0</strong></article>
+                <article><span>Critical / High</span><strong id="highRiskCount">0</strong></article>
+                <article><span>APIs analyzed</span><strong id="endpointCount">0</strong></article>
+                <article><span>Files scanned</span><strong id="fileCount">0</strong></article>
+            </section>
+
+            <section class="filter-bar" aria-label="Finding filters">
+                <input id="findingSearch" type="search" placeholder="Search rule, endpoint, file or text…">
+                <select id="severityFilter" aria-label="Filter by severity">
+                    <option value="">All severities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                    <option value="info">Info</option>
+                </select>
+                <select id="categoryFilter" aria-label="Filter by category">
+                    <option value="">All categories</option>
+                </select>
+                <select id="sourceFilter" aria-label="Filter by finding source">
+                    <option value="">All sources</option>
+                    <option value="endpoint">Endpoint analysis</option>
+                    <option value="source">Source analysis</option>
+                </select>
+            </section>
+
+            <div class="findings-heading">
+                <div><p class="eyebrow">OPEN FINDINGS</p><h2>Vulnerabilities and guidance</h2></div>
+                <span id="filteredCount">0 findings</span>
+            </div>
+            <section id="findingsList" class="findings-list"></section>
+            <section id="findingsEmpty" class="state-card hidden">No findings match the selected filters.</section>
+        </div>
+    </main>
+    <script src="/static/js/report-viewer.js"></script>
+</body>
+</html>

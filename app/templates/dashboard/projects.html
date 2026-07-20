@@ -547,6 +547,23 @@
     </div>
 </section>
 
+<section
+    id="reportViewerPanel"
+    class="report-viewer-panel hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Security findings report"
+>
+    <div class="report-viewer-backdrop"></div>
+    <div class="report-viewer-shell">
+        <iframe
+            id="reportViewerFrame"
+            title="Detailed API security findings"
+            sandbox="allow-scripts allow-same-origin allow-downloads"
+        ></iframe>
+    </div>
+</section>
+
 <div
     id="uploadModal"
     class="modal hidden"

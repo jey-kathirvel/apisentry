@@ -53,6 +53,7 @@ class ScanJobResponse(BaseModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     error_message: str | None = None
+    report_available: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -62,3 +63,8 @@ class ProjectStatusResponse(BaseModel):
     project_id: int
     project_status: str
     latest_scan: ScanJobResponse | None = None
+
+
+class ScanHistoryResponse(BaseModel):
+    scans: list[ScanJobResponse]
+    total: int
