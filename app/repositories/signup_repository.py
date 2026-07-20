@@ -29,8 +29,11 @@ class SQLAlchemySignupRepository:
     def __init__(
         self,
         db: Session,
+        *,
+        auto_commit: bool = True,
     ) -> None:
         self.db = db
+        self.auto_commit = auto_commit
 
     def email_exists(
         self,
@@ -93,7 +96,8 @@ class SQLAlchemySignupRepository:
                 verification,
             )
 
-            self.db.commit()
+            if self.auto_commit:
+                self.db.commit()
 
             self.db.refresh(
                 user,

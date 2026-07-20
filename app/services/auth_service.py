@@ -3,6 +3,7 @@ from datetime import (
     timedelta,
     timezone,
 )
+import logging
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -27,10 +28,25 @@ from app.schemas import (
     LoginRequest,
     SignupRequest,
 )
+from app.services.auth.constants import (
+    EMAIL_VERIFICATION_EXPIRY_HOURS,
+)
+from app.services.auth.email_workflow import AuthEmailWorkflow
+from app.services.auth.email_workflow_factory import (
+    create_auth_email_workflow,
+)
+from app.services.auth.exceptions import DuplicateEmailError
+from app.services.auth.signup_service import SignupService
+from app.services.auth.token import (
+    generate_verification_token,
+    hash_token as hash_verification_token,
+)
 from app.services.email_service import (
     send_password_reset_email,
-    send_verification_email,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class AuthenticationError(Exception):
@@ -174,98 +190,144 @@ def create_password_reset_token(
 def create_user(
     db: Session,
     payload: SignupRequest,
+    *,
+    email_workflow: AuthEmailWorkflow | None = None,
 ) -> User:
-    email = normalize_email(str(payload.email))
+    """Register a pending user, rolling back if verification mail fails."""
 
-    existing_user = get_user_by_email(
-        db=db,
-        email=email,
+    # Imported lazily because app.services re-exports this module and the
+    # repository depends on auth domain exceptions from that package.
+    from app.repositories.signup_repository import (
+        SQLAlchemySignupRepository,
     )
 
-    if existing_user is not None:
-        raise EmailAlreadyRegisteredError(
-            "An account already exists for this email address."
-        )
-
-    user = User(
-        full_name=payload.full_name.strip(),
-        email=email,
-        password_hash=hash_password(payload.password),
-        status=UserStatus.PENDING_VERIFICATION,
-        is_email_verified=False,
-        is_superuser=False,
+    repository = SQLAlchemySignupRepository(
+        db,
+        auto_commit=False,
     )
-
-    db.add(user)
+    service = SignupService(repository)
 
     try:
+        result = service.register(
+            full_name=payload.full_name,
+            email=str(payload.email),
+            password=payload.password,
+            password_confirmation=payload.password,
+            terms_accepted=True,
+        )
+
+        workflow = (
+            email_workflow
+            or create_auth_email_workflow()
+        )
+        workflow.send_verification_email(
+            recipient=result.user.email,
+            full_name=result.user.full_name,
+            token=result.verification_token,
+            expires_at=(
+                result.verification_token_expires_at
+            ),
+        )
+
         db.commit()
-        db.refresh(user)
-
-        verification_token = (
-            create_email_verification_token(
-                db=db,
-                user=user,
-            )
-        )
-
-        send_verification_email(
-            recipient=user.email,
-            full_name=user.full_name,
-            verification_token=verification_token,
-        )
-
+        db.refresh(result.user)
+        return result.user
+    except DuplicateEmailError as exc:
+        db.rollback()
+        raise EmailAlreadyRegisteredError(str(exc)) from exc
     except Exception:
         db.rollback()
         raise
-
-    return user
 
 
 def resend_verification(
     db: Session,
     email: str,
+    *,
+    email_workflow: AuthEmailWorkflow | None = None,
 ) -> None:
-    user = get_user_by_email(
-        db=db,
-        email=email,
+    """Replace the active token only when replacement mail is delivered.
+
+    Missing, verified, and temporarily undeliverable accounts all return
+    without an error so the HTTP response cannot disclose account state.
+    """
+
+    normalized_email = normalize_email(email)
+    user = (
+        db.query(User)
+        .filter(
+            func.lower(User.email) == normalized_email,
+        )
+        .with_for_update()
+        .first()
     )
 
-    if user is None:
+    if user is None or user.is_email_verified:
         return
 
-    if user.is_email_verified:
-        raise EmailAlreadyVerifiedError(
-            "This email address is already verified."
-        )
+    now = utc_now()
+    plain_token = generate_verification_token()
+    expires_at = now + timedelta(
+        hours=EMAIL_VERIFICATION_EXPIRY_HOURS,
+    )
 
-    verification_token = (
-        create_email_verification_token(
-            db=db,
-            user=user,
+    db.query(EmailVerification).filter(
+        EmailVerification.user_id == user.id,
+        EmailVerification.used_at.is_(None),
+    ).update(
+        {EmailVerification.used_at: now},
+        synchronize_session=False,
+    )
+
+    db.add(
+        EmailVerification(
+            user_id=user.id,
+            token_hash=hash_verification_token(plain_token),
+            expires_at=expires_at,
         )
     )
 
-    send_verification_email(
-        recipient=user.email,
-        full_name=user.full_name,
-        verification_token=verification_token,
-    )
+    try:
+        db.flush()
+        workflow = (
+            email_workflow
+            or create_auth_email_workflow()
+        )
+        workflow.send_verification_email(
+            recipient=user.email,
+            full_name=user.full_name,
+            token=plain_token,
+            expires_at=expires_at,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.exception(
+            "Verification email resend failed"
+        )
 
 
 def verify_email(
     db: Session,
     plain_token: str,
+    *,
+    email_workflow: AuthEmailWorkflow | None = None,
 ) -> User:
+    """Consume a token and activate its user in one transaction.
+
+    Welcome mail is deliberately best effort after that transaction commits.
+    """
+
     now = utc_now()
 
     verification = (
         db.query(EmailVerification)
         .filter(
             EmailVerification.token_hash
-            == hash_token(plain_token),
+            == hash_verification_token(plain_token),
             EmailVerification.used_at.is_(None),
         )
+        .with_for_update()
         .first()
     )
 
@@ -291,6 +353,7 @@ def verify_email(
         .filter(
             User.id == verification.user_id,
         )
+        .with_for_update()
         .first()
     )
 
@@ -312,6 +375,20 @@ def verify_email(
     except Exception:
         db.rollback()
         raise
+
+    try:
+        workflow = (
+            email_workflow
+            or create_auth_email_workflow()
+        )
+        workflow.send_welcome_email(
+            recipient=user.email,
+            full_name=user.full_name,
+        )
+    except Exception:
+        logger.exception(
+            "Welcome email failed after verification"
+        )
 
     return user
 

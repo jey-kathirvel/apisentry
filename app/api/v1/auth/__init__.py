@@ -24,7 +24,6 @@ from app.schemas import (
 )
 from app.services import (
     EmailAlreadyRegisteredError,
-    EmailAlreadyVerifiedError,
     InactiveUserError,
     InvalidCredentialsError,
     InvalidPasswordResetTokenError,
@@ -39,6 +38,7 @@ from app.services import (
     reset_password,
     verify_email,
 )
+from app.services.mail.exceptions import EmailDeliveryError
 
 
 router = APIRouter(
@@ -65,6 +65,14 @@ def signup(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
+        ) from exc
+    except EmailDeliveryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Account creation could not be completed. "
+                "Please try again."
+            ),
         ) from exc
 
 
@@ -100,16 +108,10 @@ def resend_user_verification(
     payload: ResendVerificationRequest,
     db: Session = Depends(get_db),
 ) -> MessageResponse:
-    try:
-        resend_verification(
-            db=db,
-            email=str(payload.email),
-        )
-    except EmailAlreadyVerifiedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(exc),
-        ) from exc
+    resend_verification(
+        db=db,
+        email=str(payload.email),
+    )
 
     return MessageResponse(
         message=(

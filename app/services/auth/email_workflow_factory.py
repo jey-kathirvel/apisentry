@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from app.core.config import settings
 from app.core.email_config import EmailConfig
 from app.services.auth.email_workflow import (
     AuthEmailWorkflow,
@@ -24,20 +25,14 @@ def create_auth_email_workflow(
 ) -> AuthEmailWorkflow:
     resolved_email_config = (
         email_config
-        or EmailConfig.from_environment()
+        or EmailConfig.from_settings(settings)
     )
 
     resolved_email_config.validate()
 
-    frontend_url = os.getenv(
-        "FRONTEND_URL",
-        "https://apisentry.ads-ai.in",
-    ).strip()
+    frontend_url = settings.frontend_url.strip()
 
-    app_name = os.getenv(
-        "APP_NAME",
-        "API Sentry",
-    ).strip()
+    app_name = settings.app_name.strip()
 
     support_email = os.getenv(
         "SUPPORT_EMAIL",

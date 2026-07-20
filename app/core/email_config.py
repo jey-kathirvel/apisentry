@@ -181,6 +181,28 @@ class EmailConfig:
 
             return default
 
+        smtp_use_ssl = _as_bool(
+            read(
+                "smtp_use_ssl",
+                "smtp_ssl",
+                default=environment_config.smtp_use_ssl,
+            ),
+            default=False,
+        )
+
+        smtp_use_tls = _as_bool(
+            read(
+                "smtp_use_tls",
+                "smtp_tls",
+                default=(
+                    False
+                    if smtp_use_ssl
+                    else environment_config.smtp_use_tls
+                ),
+            ),
+            default=not smtp_use_ssl,
+        )
+
         return cls(
             provider=str(
                 read(
@@ -222,26 +244,8 @@ class EmailConfig:
                     environment_config.smtp_password
                 ),
             ),
-            smtp_use_tls=_as_bool(
-                read(
-                    "smtp_use_tls",
-                    "smtp_tls",
-                    default=(
-                        environment_config.smtp_use_tls
-                    ),
-                ),
-                default=True,
-            ),
-            smtp_use_ssl=_as_bool(
-                read(
-                    "smtp_use_ssl",
-                    "smtp_ssl",
-                    default=(
-                        environment_config.smtp_use_ssl
-                    ),
-                ),
-                default=False,
-            ),
+            smtp_use_tls=smtp_use_tls,
+            smtp_use_ssl=smtp_use_ssl,
             smtp_timeout_seconds=_as_int(
                 read(
                     "smtp_timeout_seconds",
@@ -277,6 +281,7 @@ class EmailConfig:
             default_sender_email=str(
                 read(
                     "email_from",
+                    "smtp_from_email",
                     "default_sender_email",
                     default=(
                         environment_config
@@ -287,6 +292,7 @@ class EmailConfig:
             default_sender_name=str(
                 read(
                     "email_from_name",
+                    "smtp_from_name",
                     "default_sender_name",
                     default=(
                         environment_config

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from app.core.email_config import (
@@ -89,3 +91,24 @@ def test_environment_configuration(
     assert config.default_sender_email == (
         "security@example.com"
     )
+
+
+def test_application_settings_map_ssl_and_sender_fields() -> None:
+    config = EmailConfig.from_settings(
+        SimpleNamespace(
+            smtp_host="smtp.example.com",
+            smtp_port=465,
+            smtp_username="user",
+            smtp_password="password",
+            smtp_use_ssl=True,
+            smtp_from_email="noreply@example.com",
+            smtp_from_name="API Sentry",
+        )
+    )
+
+    config.validate()
+
+    assert config.smtp_use_ssl is True
+    assert config.smtp_use_tls is False
+    assert config.default_sender_email == "noreply@example.com"
+    assert config.default_sender_name == "API Sentry"
