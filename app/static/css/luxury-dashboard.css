@@ -1,0 +1,1391 @@
+/*
+=====================================================
+ API Sentry Enterprise Luxury Edition
+ UI-003 PATCH-001
+ Security Command Center Dashboard
+=====================================================
+*/
+
+
+/*
+=====================================================
+ COMMAND CENTER CONTAINER
+=====================================================
+*/
+
+.security-command-center {
+
+    display: grid;
+
+    gap: 22px;
+
+}
+
+
+.command-center-grid {
+
+    display: grid;
+
+    grid-template-columns:
+
+        minmax(0, 1.65fr)
+        minmax(290px, 0.75fr);
+
+    gap: 20px;
+
+}
+
+
+/*
+=====================================================
+ SECURITY POSTURE HERO
+=====================================================
+*/
+
+.security-posture-panel {
+
+    position: relative;
+
+    min-height: 278px;
+
+    overflow: hidden;
+
+    padding: 30px;
+
+    border:
+
+        1px solid rgba(212, 175, 55, 0.24);
+
+    border-radius: var(--radius-xl);
+
+    background:
+
+        radial-gradient(
+            circle at 93% 12%,
+            rgba(212, 175, 55, 0.20),
+            transparent 17rem
+        ),
+
+        radial-gradient(
+            circle at 4% 100%,
+            rgba(22, 138, 82, 0.10),
+            transparent 18rem
+        ),
+
+        linear-gradient(
+            145deg,
+            #241d11,
+            #17130c 72%
+        );
+
+    color: #fff8e7;
+
+    box-shadow:
+
+        0 24px 64px rgba(23, 19, 12, 0.20);
+
+}
+
+
+.security-posture-panel::before {
+
+    position: absolute;
+
+    top: -82px;
+
+    right: -62px;
+
+    width: 250px;
+
+    height: 250px;
+
+    border:
+
+        1px solid rgba(212, 175, 55, 0.15);
+
+    border-radius: 50%;
+
+    content: "";
+
+}
+
+
+.security-posture-panel::after {
+
+    position: absolute;
+
+    top: -42px;
+
+    right: -23px;
+
+    width: 168px;
+
+    height: 168px;
+
+    border:
+
+        1px solid rgba(212, 175, 55, 0.13);
+
+    border-radius: 50%;
+
+    content: "";
+
+}
+
+
+.posture-panel-header {
+
+    position: relative;
+
+    z-index: 1;
+
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 24px;
+
+}
+
+
+.posture-panel-header h2 {
+
+    max-width: 650px;
+
+    margin: 0;
+
+    color: #fff8e7;
+
+    font-size: clamp(26px, 3vw, 38px);
+
+    line-height: 1.08;
+
+    letter-spacing: -0.04em;
+
+}
+
+
+.posture-panel-header > div > p:last-child {
+
+    max-width: 650px;
+
+    margin: 12px 0 0;
+
+    color: rgba(255, 248, 231, 0.64);
+
+    font-size: 13px;
+
+    line-height: 1.7;
+
+}
+
+
+.posture-panel-header .button {
+
+    position: relative;
+
+    z-index: 2;
+
+    flex: 0 0 auto;
+
+    border-color:
+
+        rgba(212, 175, 55, 0.45) !important;
+
+    background:
+
+        rgba(212, 175, 55, 0.11) !important;
+
+    color: #f5d978 !important;
+
+    box-shadow: none;
+
+}
+
+
+.posture-panel-header .button:hover {
+
+    background:
+
+        rgba(212, 175, 55, 0.20) !important;
+
+}
+
+
+/*
+=====================================================
+ SECURITY SCORE
+=====================================================
+*/
+
+.posture-summary {
+
+    position: relative;
+
+    z-index: 1;
+
+    display: grid;
+
+    grid-template-columns:
+
+        178px
+        minmax(0, 1fr);
+
+    gap: 28px;
+
+    align-items: center;
+
+    margin-top: 28px;
+
+}
+
+
+.security-score-ring {
+
+    position: relative;
+
+    display: grid;
+
+    width: 158px;
+
+    height: 158px;
+
+    place-items: center;
+
+    border-radius: 50%;
+
+    background:
+
+        conic-gradient(
+            var(--lux-gold-400) 0deg,
+            var(--lux-gold-500) 0deg,
+            rgba(255, 255, 255, 0.08) 0deg,
+            rgba(255, 255, 255, 0.08) 360deg
+        );
+
+    box-shadow:
+
+        inset 0 0 28px rgba(212, 175, 55, 0.08),
+
+        0 18px 42px rgba(0, 0, 0, 0.18);
+
+}
+
+
+.security-score-ring::before {
+
+    position: absolute;
+
+    inset: 12px;
+
+    border:
+
+        1px solid rgba(212, 175, 55, 0.19);
+
+    border-radius: inherit;
+
+    content: "";
+
+    background:
+
+        linear-gradient(
+            145deg,
+            #211a0f,
+            #151109
+        );
+
+}
+
+
+.security-score-content {
+
+    position: relative;
+
+    z-index: 1;
+
+    text-align: center;
+
+}
+
+
+.security-score-content strong {
+
+    display: block;
+
+    color: #f5d978;
+
+    font-size: 36px;
+
+    line-height: 1;
+
+    letter-spacing: -0.06em;
+
+}
+
+
+.security-score-content span {
+
+    display: block;
+
+    margin-top: 8px;
+
+    color: rgba(255, 248, 231, 0.48);
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.14em;
+
+    text-transform: uppercase;
+
+}
+
+
+/*
+=====================================================
+ RISK SUMMARY
+=====================================================
+*/
+
+.risk-summary-grid {
+
+    display: grid;
+
+    grid-template-columns:
+
+        repeat(4, minmax(0, 1fr));
+
+    gap: 10px;
+
+}
+
+
+.risk-summary-card {
+
+    position: relative;
+
+    min-width: 0;
+
+    padding: 15px;
+
+    border:
+
+        1px solid rgba(255, 255, 255, 0.08);
+
+    border-radius: 14px;
+
+    background:
+
+        rgba(255, 255, 255, 0.035);
+
+}
+
+
+.risk-summary-card::before {
+
+    position: absolute;
+
+    top: 0;
+
+    right: 14px;
+
+    left: 14px;
+
+    height: 2px;
+
+    border-radius:
+
+        0 0 4px 4px;
+
+    content: "";
+
+}
+
+
+.risk-summary-card span,
+.risk-summary-card strong,
+.risk-summary-card small {
+
+    display: block;
+
+}
+
+
+.risk-summary-card span {
+
+    margin-bottom: 10px;
+
+    color: rgba(255, 248, 231, 0.52);
+
+    font-size: 9px;
+
+    font-weight: 850;
+
+    letter-spacing: 0.10em;
+
+    text-transform: uppercase;
+
+}
+
+
+.risk-summary-card strong {
+
+    color: #ffffff;
+
+    font-size: 25px;
+
+    letter-spacing: -0.04em;
+
+}
+
+
+.risk-summary-card small {
+
+    margin-top: 6px;
+
+    overflow: hidden;
+
+    color: rgba(255, 248, 231, 0.38);
+
+    font-size: 9px;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+}
+
+
+.risk-critical::before {
+
+    background: var(--severity-critical);
+
+    box-shadow:
+
+        0 0 12px rgba(153, 27, 27, 0.62);
+
+}
+
+
+.risk-high::before {
+
+    background: var(--severity-high);
+
+    box-shadow:
+
+        0 0 12px rgba(220, 38, 38, 0.52);
+
+}
+
+
+.risk-medium::before {
+
+    background: var(--severity-medium);
+
+    box-shadow:
+
+        0 0 12px rgba(217, 119, 6, 0.52);
+
+}
+
+
+.risk-low::before {
+
+    background: var(--severity-low);
+
+    box-shadow:
+
+        0 0 12px rgba(37, 99, 235, 0.48);
+
+}
+
+
+/*
+=====================================================
+ TODAY SECURITY PANEL
+=====================================================
+*/
+
+.today-security-panel {
+
+    min-height: 278px;
+
+    padding: 24px;
+
+    border:
+
+        1px solid var(--lux-border);
+
+    border-radius: var(--radius-xl);
+
+    background:
+
+        rgba(255, 255, 255, 0.84);
+
+    box-shadow: var(--shadow-sm);
+
+}
+
+
+.today-security-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 14px;
+
+    padding-bottom: 18px;
+
+    border-bottom:
+
+        1px solid var(--lux-border);
+
+}
+
+
+.today-security-header h3 {
+
+    margin: 0;
+
+    font-size: 18px;
+
+    letter-spacing: -0.025em;
+
+}
+
+
+.live-indicator {
+
+    display: inline-flex;
+
+    min-height: 26px;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 0 9px;
+
+    border:
+
+        1px solid #b8dfc9;
+
+    border-radius: 999px;
+
+    background: var(--scan-green-soft);
+
+    color: var(--scan-green-dark);
+
+    font-size: 9px;
+
+    font-weight: 850;
+
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
+
+}
+
+
+.live-indicator::before {
+
+    width: 7px;
+
+    height: 7px;
+
+    border-radius: 50%;
+
+    content: "";
+
+    background: var(--scan-green);
+
+    box-shadow:
+
+        0 0 0 4px rgba(22, 138, 82, 0.10);
+
+}
+
+
+.today-security-list {
+
+    display: grid;
+
+    gap: 0;
+
+    margin-top: 8px;
+
+}
+
+
+.today-security-item {
+
+    display: flex;
+
+    min-height: 51px;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 18px;
+
+    border-bottom:
+
+        1px solid rgba(228, 215, 183, 0.66);
+
+}
+
+
+.today-security-item:last-child {
+
+    border-bottom: 0;
+
+}
+
+
+.today-security-item span {
+
+    color: var(--lux-text-soft);
+
+    font-size: 11px;
+
+    font-weight: 680;
+
+}
+
+
+.today-security-item strong {
+
+    color: var(--lux-text);
+
+    font-size: 16px;
+
+    letter-spacing: -0.03em;
+
+}
+
+
+.today-security-note {
+
+    margin: 12px 0 0;
+
+    padding: 11px 12px;
+
+    border:
+
+        1px solid var(--lux-border);
+
+    border-radius: 11px;
+
+    background: var(--lux-gold-50);
+
+    color: var(--lux-text-soft);
+
+    font-size: 10px;
+
+    line-height: 1.55;
+
+}
+
+
+/*
+=====================================================
+ OPERATIONAL METRICS
+=====================================================
+*/
+
+.operational-overview {
+
+    padding: 22px;
+
+    border:
+
+        1px solid var(--lux-border);
+
+    border-radius: var(--radius-xl);
+
+    background:
+
+        rgba(255, 255, 255, 0.72);
+
+    box-shadow: var(--shadow-sm);
+
+}
+
+
+.operational-heading {
+
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    margin-bottom: 17px;
+
+}
+
+
+.operational-heading h3 {
+
+    margin: 0;
+
+    font-size: 18px;
+
+    letter-spacing: -0.025em;
+
+}
+
+
+.operational-heading p {
+
+    margin: 5px 0 0;
+
+    color: var(--lux-text-soft);
+
+    font-size: 11px;
+
+}
+
+
+.operational-heading small {
+
+    color: var(--lux-text-faint);
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.10em;
+
+    text-transform: uppercase;
+
+}
+
+
+.operational-metric-grid {
+
+    display: grid;
+
+    grid-template-columns:
+
+        repeat(4, minmax(0, 1fr));
+
+    gap: 12px;
+
+}
+
+
+.operational-card {
+
+    display: flex;
+
+    min-width: 0;
+
+    min-height: 89px;
+
+    align-items: center;
+
+    gap: 13px;
+
+    padding: 15px;
+
+    border:
+
+        1px solid var(--lux-border);
+
+    border-radius: 14px;
+
+    background: var(--lux-surface);
+
+}
+
+
+.operational-icon {
+
+    display: grid;
+
+    width: 40px;
+
+    height: 40px;
+
+    flex: 0 0 40px;
+
+    place-items: center;
+
+    border-radius: 11px;
+
+    font-size: 14px;
+
+    font-weight: 900;
+
+}
+
+
+.operational-icon.projects {
+
+    background: var(--lux-gold-100);
+
+    color: var(--lux-gold-700);
+
+}
+
+
+.operational-icon.ready {
+
+    background: #eaf2ff;
+
+    color: var(--severity-low);
+
+}
+
+
+.operational-icon.scanning {
+
+    background: var(--scan-green-soft);
+
+    color: var(--scan-green);
+
+}
+
+
+.operational-icon.completed {
+
+    background: #ebf8ef;
+
+    color: var(--secure-green);
+
+}
+
+
+.operational-card span,
+.operational-card strong {
+
+    display: block;
+
+}
+
+
+.operational-card span {
+
+    margin-bottom: 4px;
+
+    overflow: hidden;
+
+    color: var(--lux-text-soft);
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+}
+
+
+.operational-card strong {
+
+    font-size: 23px;
+
+    letter-spacing: -0.04em;
+
+}
+
+
+/*
+=====================================================
+ PROJECT INVENTORY HEADING
+=====================================================
+*/
+
+#projectsSection {
+
+    padding-top: 26px;
+
+}
+
+
+#projectsSection .section-heading {
+
+    padding: 22px 24px;
+
+    border:
+
+        1px solid var(--lux-border);
+
+    border-radius: var(--radius-lg);
+
+    background:
+
+        rgba(255, 255, 255, 0.68);
+
+    box-shadow: var(--shadow-sm);
+
+}
+
+
+#projectsSection .section-heading h2 {
+
+    font-size: 24px;
+
+}
+
+
+#projectsSection .project-search {
+
+    align-self: center;
+
+}
+
+
+/*
+=====================================================
+ EMPTY STATE
+=====================================================
+*/
+
+#projectEmptyState {
+
+    min-height: 230px;
+
+    border-color: var(--lux-border-strong);
+
+    background:
+
+        radial-gradient(
+            circle at center,
+            rgba(212, 175, 55, 0.06),
+            transparent 17rem
+        ),
+
+        var(--lux-surface);
+
+}
+
+
+#projectEmptyState .empty-icon {
+
+    background: var(--lux-gold-100);
+
+    color: var(--lux-gold-600);
+
+}
+
+
+/*
+=====================================================
+ RESPONSIVE
+=====================================================
+*/
+
+@media (max-width: 1200px) {
+
+    .command-center-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .today-security-panel {
+
+        min-height: auto;
+
+    }
+
+
+    .today-security-list {
+
+        grid-template-columns:
+
+            repeat(4, minmax(0, 1fr));
+
+        gap: 12px;
+
+        margin-top: 18px;
+
+    }
+
+
+    .today-security-item {
+
+        min-height: 72px;
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        justify-content: center;
+
+        gap: 5px;
+
+        padding: 10px 12px;
+
+        border:
+
+            1px solid var(--lux-border);
+
+        border-radius: 12px;
+
+    }
+
+}
+
+
+@media (max-width: 960px) {
+
+    .posture-summary {
+
+        grid-template-columns: 142px minmax(0, 1fr);
+
+    }
+
+
+    .security-score-ring {
+
+        width: 132px;
+
+        height: 132px;
+
+    }
+
+
+    .risk-summary-grid,
+    .operational-metric-grid {
+
+        grid-template-columns:
+
+            repeat(2, minmax(0, 1fr));
+
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .security-posture-panel {
+
+        padding: 24px;
+
+    }
+
+
+    .posture-panel-header {
+
+        align-items: stretch;
+
+        flex-direction: column;
+
+    }
+
+
+    .posture-panel-header .button {
+
+        align-self: flex-start;
+
+    }
+
+
+    .posture-summary {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .security-score-ring {
+
+        width: 126px;
+
+        height: 126px;
+
+    }
+
+
+    .today-security-list {
+
+        grid-template-columns:
+
+            repeat(2, minmax(0, 1fr));
+
+    }
+
+
+    .operational-heading {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+    }
+
+}
+
+
+@media (max-width: 520px) {
+
+    .security-posture-panel,
+    .today-security-panel,
+    .operational-overview {
+
+        padding: 18px;
+
+        border-radius: 18px;
+
+    }
+
+
+    .risk-summary-grid,
+    .operational-metric-grid,
+    .today-security-list {
+
+        grid-template-columns: 1fr 1fr;
+
+    }
+
+
+    .risk-summary-card {
+
+        padding: 13px;
+
+    }
+
+
+    .operational-card {
+
+        min-height: 80px;
+
+        padding: 12px;
+
+    }
+
+
+    #projectsSection .section-heading {
+
+        padding: 18px;
+
+    }
+
+}
+
+
+@media (max-width: 380px) {
+
+    .risk-summary-grid,
+    .operational-metric-grid,
+    .today-security-list {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
+
+
+/*
+=====================================================
+ UI-003 PATCH-002
+ LIVE EXECUTIVE SECURITY DATA
+=====================================================
+*/
+
+.security-score-ring {
+
+    --security-score-angle: 0deg;
+
+    background:
+
+        conic-gradient(
+            var(--score-ring-color, var(--lux-gold-400))
+                0deg,
+
+            var(--score-ring-color, var(--lux-gold-500))
+                var(--security-score-angle),
+
+            rgba(255, 255, 255, 0.08)
+                var(--security-score-angle),
+
+            rgba(255, 255, 255, 0.08)
+                360deg
+        );
+
+    transition:
+
+        background 420ms ease,
+
+        box-shadow 420ms ease;
+
+}
+
+
+.security-score-ring.score-critical {
+
+    --score-ring-color: var(--severity-critical);
+
+}
+
+
+.security-score-ring.score-high {
+
+    --score-ring-color: var(--severity-high);
+
+}
+
+
+.security-score-ring.score-medium {
+
+    --score-ring-color: var(--severity-medium);
+
+}
+
+
+.security-score-ring.score-good {
+
+    --score-ring-color: var(--scan-green);
+
+}
+
+
+.security-score-ring.score-excellent {
+
+    --score-ring-color: #4ade80;
+
+}
+
+
+.security-score-ring.has-score {
+
+    box-shadow:
+
+        inset 0 0 28px rgba(212, 175, 55, 0.08),
+
+        0 18px 42px rgba(0, 0, 0, 0.18),
+
+        0 0 28px color-mix(
+            in srgb,
+            var(--score-ring-color) 28%,
+            transparent
+        );
+
+}
+
+
+#securityScoreValue {
+
+    transition:
+
+        color 220ms ease,
+
+        transform 220ms ease;
+
+}
+
+
+#securityScoreValue.score-updated {
+
+    transform: scale(1.06);
+
+}
+
+
+#latestPostureValue.posture-critical {
+
+    color: var(--severity-critical);
+
+}
+
+
+#latestPostureValue.posture-high {
+
+    color: var(--severity-high);
+
+}
+
+
+#latestPostureValue.posture-medium {
+
+    color: var(--severity-medium);
+
+}
+
+
+#latestPostureValue.posture-low {
+
+    color: var(--severity-low);
+
+}
+
+
+#latestPostureValue.posture-secure {
+
+    color: var(--scan-green);
+
+}
+
+
+#latestScanSummary {
+
+    display: grid;
+
+    gap: 4px;
+
+}
+
+
+#latestScanSummary strong {
+
+    display: block;
+
+    overflow: hidden;
+
+    color: var(--lux-text);
+
+    font-size: 11px;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+}
+
+
+#latestScanSummary span {
+
+    display: block;
+
+    color: var(--lux-text-soft);
+
+    font-size: 10px;
+
+    line-height: 1.5;
+
+}
+
+
+.risk-summary-card strong {
+
+    transition:
+
+        color 180ms ease,
+
+        transform 180ms ease;
+
+}
+
+
+.risk-summary-card strong.metric-updated {
+
+    transform: translateY(-2px);
+
+}

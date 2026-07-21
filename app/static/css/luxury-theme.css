@@ -1,0 +1,894 @@
+/*
+=====================================================
+ API Sentry Enterprise Luxury Edition
+ UI-001 PATCH-001
+ Luxury Design System Foundation
+=====================================================
+*/
+
+:root {
+
+    color-scheme: light;
+
+    /* -----------------------------------------
+       LUXURY GOLD BRAND
+    ----------------------------------------- */
+
+    --lux-gold-50: #fffaf0;
+    --lux-gold-100: #f8edcf;
+    --lux-gold-200: #ead69d;
+    --lux-gold-300: #d9bd67;
+    --lux-gold-400: #c9a646;
+    --lux-gold-500: #b8860b;
+    --lux-gold-600: #956c08;
+    --lux-gold-700: #735307;
+    --lux-gold-800: #4f3908;
+    --lux-gold-900: #2f2309;
+
+    /* -----------------------------------------
+       LUXURY SURFACES
+    ----------------------------------------- */
+
+    --lux-canvas: #f8f5ec;
+    --lux-canvas-soft: #fcfaf5;
+    --lux-surface: #ffffff;
+    --lux-surface-soft: #f5f0e5;
+
+    --lux-sidebar: #17130c;
+    --lux-sidebar-soft: #241d11;
+
+    --lux-text: #211d14;
+    --lux-text-soft: #746b59;
+    --lux-text-faint: #9a907b;
+
+    --lux-border: #e4d7b7;
+    --lux-border-strong: #cdbb8e;
+
+    /* -----------------------------------------
+       SECURITY SEMANTIC COLORS
+    ----------------------------------------- */
+
+    --scan-green: #168a52;
+    --scan-green-dark: #0c6b3d;
+    --scan-green-soft: #eaf8f0;
+
+    --secure-green: #087a43;
+
+    --issue-red: #b42318;
+    --issue-red-dark: #8f1d14;
+    --issue-red-soft: #fff0ee;
+
+    --severity-critical: #991b1b;
+    --severity-high: #dc2626;
+    --severity-medium: #d97706;
+    --severity-low: #2563eb;
+    --severity-info: #64748b;
+
+    /* -----------------------------------------
+       TYPOGRAPHY
+    ----------------------------------------- */
+
+    --font-sans:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    /* -----------------------------------------
+       RADIUS
+    ----------------------------------------- */
+
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-2xl: 30px;
+
+    /* -----------------------------------------
+       SHADOWS
+    ----------------------------------------- */
+
+    --shadow-sm:
+        0 8px 24px rgba(47, 35, 9, 0.07);
+
+    --shadow-md:
+        0 18px 48px rgba(47, 35, 9, 0.10);
+
+    --shadow-lg:
+        0 26px 70px rgba(47, 35, 9, 0.14);
+
+    --shadow-gold:
+        0 12px 34px rgba(184, 134, 11, 0.20);
+
+    --shadow-green:
+        0 12px 30px rgba(22, 138, 82, 0.20);
+
+    --shadow-red:
+        0 12px 30px rgba(180, 35, 24, 0.18);
+
+    /* -----------------------------------------
+       TRANSITIONS
+    ----------------------------------------- */
+
+    --transition-fast: 140ms ease;
+    --transition-normal: 190ms ease;
+    --transition-slow: 280ms ease;
+
+    /* -----------------------------------------
+       COMPATIBILITY WITH EXISTING CSS
+    ----------------------------------------- */
+
+    --background: var(--lux-canvas);
+    --surface: var(--lux-surface);
+    --surface-soft: var(--lux-canvas-soft);
+
+    --primary: var(--lux-gold-500);
+    --primary-dark: var(--lux-gold-600);
+    --primary-soft: var(--lux-gold-100);
+
+    --navy: var(--lux-sidebar);
+    --navy-soft: var(--lux-sidebar-soft);
+
+    --text: var(--lux-text);
+    --text-soft: var(--lux-text-soft);
+
+    --border: var(--lux-border);
+
+    --success: var(--scan-green);
+    --warning: var(--severity-medium);
+    --danger: var(--issue-red);
+    --blue: var(--severity-low);
+
+    --shadow: var(--shadow-md);
+    --shadow-soft: var(--shadow-sm);
+}
+
+
+/*
+=====================================================
+ GLOBAL FOUNDATION
+=====================================================
+*/
+
+*,
+*::before,
+*::after {
+
+    box-sizing: border-box;
+
+}
+
+
+html {
+
+    min-height: 100%;
+
+    scroll-behavior: smooth;
+
+    background: var(--lux-canvas);
+
+}
+
+
+body {
+
+    min-height: 100vh;
+
+    margin: 0;
+
+    background:
+
+        radial-gradient(
+            circle at 92% 4%,
+            rgba(212, 175, 55, 0.11),
+            transparent 28rem
+        ),
+
+        radial-gradient(
+            circle at 5% 95%,
+            rgba(184, 134, 11, 0.05),
+            transparent 24rem
+        ),
+
+        var(--lux-canvas);
+
+    color: var(--lux-text);
+
+    font-family: var(--font-sans);
+
+    text-rendering: optimizeLegibility;
+
+    -webkit-font-smoothing: antialiased;
+
+}
+
+
+::selection {
+
+    background: var(--lux-gold-200);
+
+    color: var(--lux-text);
+
+}
+
+
+a {
+
+    color: var(--lux-gold-600);
+
+}
+
+
+button,
+input,
+textarea,
+select {
+
+    font: inherit;
+
+}
+
+
+button {
+
+    cursor: pointer;
+
+}
+
+
+:focus-visible {
+
+    outline: 3px solid rgba(184, 134, 11, 0.32);
+
+    outline-offset: 3px;
+
+}
+
+
+.hidden {
+
+    display: none !important;
+
+}
+
+
+/*
+=====================================================
+ BRAND
+=====================================================
+*/
+
+.eyebrow,
+.brand-accent,
+.text-gold {
+
+    color: var(--lux-gold-600) !important;
+
+}
+
+
+.brand-badge {
+
+    border-color: rgba(212, 175, 55, 0.50) !important;
+
+    background:
+
+        linear-gradient(
+            145deg,
+            #302410,
+            #17130c
+        ) !important;
+
+    color: #f5d978 !important;
+
+    box-shadow:
+
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+
+        var(--shadow-gold);
+
+}
+
+
+.light-eyebrow {
+
+    color: #ead28a !important;
+
+}
+
+
+/*
+=====================================================
+ BUTTONS
+=====================================================
+*/
+
+.button {
+
+    transition:
+
+        transform var(--transition-normal),
+
+        border-color var(--transition-normal),
+
+        background var(--transition-normal),
+
+        color var(--transition-normal),
+
+        box-shadow var(--transition-normal);
+
+}
+
+
+.button:hover {
+
+    transform: translateY(-1px);
+
+}
+
+
+.button-primary {
+
+    border-color: var(--lux-gold-600) !important;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            #ddbd57,
+            #b8860b
+        ) !important;
+
+    color: #201705 !important;
+
+    box-shadow: var(--shadow-gold);
+
+}
+
+
+.button-primary:hover {
+
+    border-color: var(--lux-gold-500) !important;
+
+    background:
+
+        linear-gradient(
+            135deg,
+            #e7cb73,
+            #c49316
+        ) !important;
+
+    box-shadow:
+
+        0 15px 38px rgba(184, 134, 11, 0.28);
+
+}
+
+
+.button-secondary,
+.button-light,
+.icon-button {
+
+    border-color: var(--lux-border) !important;
+
+    background: var(--lux-surface) !important;
+
+    color: var(--lux-text) !important;
+
+}
+
+
+.button-secondary:hover,
+.button-light:hover,
+.icon-button:hover {
+
+    border-color: var(--lux-gold-400) !important;
+
+    background: var(--lux-gold-50) !important;
+
+    color: var(--lux-gold-700) !important;
+
+}
+
+
+.button-danger {
+
+    border-color: #f3c4be !important;
+
+    background: var(--issue-red-soft) !important;
+
+    color: var(--issue-red) !important;
+
+}
+
+
+.button-danger:hover {
+
+    border-color: var(--issue-red) !important;
+
+    background: #ffe5e1 !important;
+
+}
+
+
+/*
+=====================================================
+ FORM CONTROLS
+=====================================================
+*/
+
+input,
+textarea,
+select {
+
+    border-color: var(--lux-border) !important;
+
+    background: var(--lux-surface) !important;
+
+    color: var(--lux-text) !important;
+
+    transition:
+
+        border-color var(--transition-normal),
+
+        box-shadow var(--transition-normal),
+
+        background var(--transition-normal);
+
+}
+
+
+input::placeholder,
+textarea::placeholder {
+
+    color: var(--lux-text-faint);
+
+}
+
+
+input:focus,
+textarea:focus,
+select:focus {
+
+    border-color: var(--lux-gold-500) !important;
+
+    box-shadow:
+
+        0 0 0 4px rgba(184, 134, 11, 0.13) !important;
+
+    outline: none;
+
+}
+
+
+/*
+=====================================================
+ CARDS AND PANELS
+=====================================================
+*/
+
+.card,
+.auth-card,
+.metric-card,
+.state-card,
+.progress-summary,
+.monitor-metrics > article,
+.summary-grid > article {
+
+    border-color: var(--lux-border) !important;
+
+    background-color: var(--lux-surface);
+
+    box-shadow: var(--shadow-sm);
+
+}
+
+
+.card,
+.metric-card,
+.summary-grid > article {
+
+    transition:
+
+        transform var(--transition-normal),
+
+        border-color var(--transition-normal),
+
+        box-shadow var(--transition-normal);
+
+}
+
+
+.card:hover,
+.metric-card:hover,
+.summary-grid > article:hover {
+
+    border-color: var(--lux-border-strong) !important;
+
+    box-shadow: var(--shadow-md);
+
+    transform: translateY(-2px);
+
+}
+
+
+/*
+=====================================================
+ APPLICATION SHELL
+=====================================================
+*/
+
+.sidebar,
+.auth-brand-panel {
+
+    background:
+
+        radial-gradient(
+            circle at 20% 8%,
+            rgba(212, 175, 55, 0.16),
+            transparent 21rem
+        ),
+
+        linear-gradient(
+            155deg,
+            var(--lux-sidebar-soft),
+            var(--lux-sidebar)
+        ) !important;
+
+}
+
+
+.sidebar {
+
+    border-right:
+
+        1px solid rgba(212, 175, 55, 0.20);
+
+}
+
+
+.sidebar-brand {
+
+    border-bottom-color:
+
+        rgba(212, 175, 55, 0.15) !important;
+
+}
+
+
+.sidebar-brand strong {
+
+    color: #fff8e7;
+
+}
+
+
+.sidebar-brand small,
+.sidebar-user small {
+
+    color: rgba(255, 248, 231, 0.58) !important;
+
+}
+
+
+.sidebar-user strong {
+
+    color: #fff8e7;
+
+}
+
+
+.nav-link {
+
+    transition:
+
+        background var(--transition-normal),
+
+        color var(--transition-normal),
+
+        border-color var(--transition-normal),
+
+        transform var(--transition-normal);
+
+}
+
+
+.nav-link:hover {
+
+    color: #f5d978 !important;
+
+    transform: translateX(2px);
+
+}
+
+
+.nav-link.active {
+
+    border-color:
+
+        rgba(212, 175, 55, 0.38) !important;
+
+    background:
+
+        rgba(212, 175, 55, 0.13) !important;
+
+    color: #f5d978 !important;
+
+}
+
+
+.topbar {
+
+    border-bottom-color: var(--lux-border) !important;
+
+    background:
+
+        rgba(252, 250, 245, 0.91) !important;
+
+    backdrop-filter: blur(16px);
+
+    -webkit-backdrop-filter: blur(16px);
+
+}
+
+
+/*
+=====================================================
+ AUTHENTICATION
+=====================================================
+*/
+
+.auth-view {
+
+    background:
+
+        radial-gradient(
+            circle at top left,
+            rgba(212, 175, 55, 0.13),
+            transparent 34%
+        ),
+
+        var(--lux-canvas) !important;
+
+}
+
+
+.auth-shell {
+
+    border:
+
+        1px solid var(--lux-border);
+
+    box-shadow: var(--shadow-lg) !important;
+
+}
+
+
+.auth-tab.active {
+
+    border-color:
+
+        rgba(184, 134, 11, 0.42) !important;
+
+    background: var(--lux-gold-100) !important;
+
+    color: var(--lux-gold-700) !important;
+
+}
+
+
+/*
+=====================================================
+ SCANNING AND SECURE STATES
+=====================================================
+*/
+
+.text-scanning,
+.text-running,
+.text-secure,
+.status-scanning,
+.status-running,
+.status-completed,
+.scan-status,
+#monitorStage,
+#monitorPercentage,
+#monitorStatus {
+
+    color: var(--scan-green) !important;
+
+}
+
+
+.progress-bar,
+.scan-progress-bar {
+
+    background:
+
+        linear-gradient(
+            90deg,
+            var(--scan-green-dark),
+            #22a866,
+            #62c68d
+        ) !important;
+
+    box-shadow:
+
+        0 0 18px rgba(22, 138, 82, 0.30);
+
+}
+
+
+.badge-success,
+.badge-running,
+.badge-completed,
+.status-success {
+
+    border-color: #b8dfc9 !important;
+
+    background: var(--scan-green-soft) !important;
+
+    color: var(--scan-green-dark) !important;
+
+}
+
+
+/*
+=====================================================
+ ISSUE AND FAILURE STATES
+=====================================================
+*/
+
+.text-issue,
+.text-error,
+.text-critical,
+.text-high,
+.status-failed,
+.state-card.error,
+#highRiskCount {
+
+    color: var(--issue-red) !important;
+
+}
+
+
+.badge-danger,
+.badge-critical,
+.badge-high,
+.status-failed {
+
+    border-color: #f0bbb4 !important;
+
+    background: var(--issue-red-soft) !important;
+
+    color: var(--issue-red-dark) !important;
+
+}
+
+
+.severity-critical {
+
+    color: var(--severity-critical) !important;
+
+}
+
+
+.severity-high {
+
+    color: var(--severity-high) !important;
+
+}
+
+
+.severity-medium {
+
+    color: var(--severity-medium) !important;
+
+}
+
+
+.severity-low {
+
+    color: var(--severity-low) !important;
+
+}
+
+
+.severity-info {
+
+    color: var(--severity-info) !important;
+
+}
+
+
+/*
+=====================================================
+ SCAN ANIMATION
+=====================================================
+*/
+
+@keyframes luxury-scan-pulse {
+
+    0%,
+    100% {
+
+        box-shadow:
+
+            0 0 0 0 rgba(22, 138, 82, 0.28);
+
+    }
+
+    50% {
+
+        box-shadow:
+
+            0 0 0 10px rgba(22, 138, 82, 0);
+
+    }
+
+}
+
+
+@keyframes luxury-progress-glow {
+
+    0%,
+    100% {
+
+        filter: brightness(1);
+
+    }
+
+    50% {
+
+        filter: brightness(1.15);
+
+    }
+
+}
+
+
+.is-scanning,
+.status-running,
+.scan-pulse {
+
+    animation:
+
+        luxury-scan-pulse 1.8s ease-in-out infinite;
+
+}
+
+
+.progress-bar {
+
+    animation:
+
+        luxury-progress-glow 2.2s ease-in-out infinite;
+
+}
+
+
+/*
+=====================================================
+ ACCESSIBILITY
+=====================================================
+*/
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+
+        scroll-behavior: auto !important;
+
+        animation-duration: 0.01ms !important;
+
+        animation-iteration-count: 1 !important;
+
+        transition-duration: 0.01ms !important;
+
+    }
+
+}

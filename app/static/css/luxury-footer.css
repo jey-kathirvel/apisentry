@@ -1,0 +1,84 @@
+/*
+=====================================================
+ API Sentry Enterprise Footer
+=====================================================
+*/
+
+.app-footer {
+
+    margin-top: 48px;
+
+    border-top: 2px solid rgba(212,175,55,.35);
+
+    background:
+        linear-gradient(
+            180deg,
+            #17130c,
+            #100d08
+        );
+
+    color: rgba(255,255,255,.78);
+
+    font-size: 12px;
+
+    letter-spacing: .02em;
+
+}
+
+
+.app-footer-inner{
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    gap:12px;
+
+    min-height:56px;
+
+    flex-wrap:wrap;
+
+    padding:0 20px;
+
+}
+
+
+.app-footer a{
+
+    color:#d4af37;
+
+    text-decoration:none;
+
+    transition:.2s;
+
+}
+
+.app-footer a:hover{
+
+    color:#f5d978;
+
+    text-decoration:underline;
+
+}
+
+.footer-separator{
+
+    color:rgba(255,255,255,.28);
+
+}
+
+@media (max-width:768px){
+
+    .app-footer-inner{
+
+        padding:14px;
+
+        gap:8px;
+
+        line-height:1.8;
+
+    }
+
+}
